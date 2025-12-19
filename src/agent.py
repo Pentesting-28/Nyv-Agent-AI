@@ -1,20 +1,23 @@
 import os
 import json
 from pprint import pprint
-class Agent:
+from models.agent_model import AgentModel
+from tools import get_all_tools
+class Agent(AgentModel):
     def __init__(self):
-        self.set_tools()
-        self.messages = [
-            {
-                "role": "system",
-                "content": "You are a helpful assistant who speaks Spanish and you are very concise with your answers."
-            }
-        ]
+        self.tools = get_all_tools()
+        self.messages = []
+        # self.messages = [
+        #     {
+        #         "role": "system",
+        #         "content": "You are a helpful assistant who speaks Spanish and you are very concise with your answers."
+        #     }
+        # ]
 
-    def set_tools(self):
-        pass
+    async def build_system_prompt(self):
+        return "You are a helpful assistant who speaks Spanish and you are very concise with your answers."
         
-    def process_response(self, response):
+    async def process_response(self, response):
 
         if not response.get("choices"):
             return False
