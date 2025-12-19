@@ -3,77 +3,74 @@ import json
 from pprint import pprint
 from models.agent_model import AgentModel
 from tools import get_all_tools
+
+
 class Agent(AgentModel):
     def __init__(self):
         self.tools = get_all_tools()
+        self.tools_map = {tool.name: tool for tool in self.tools}
         self.messages = []
-        # self.messages = [
-        #     {
-        #         "role": "system",
-        #         "content": "You are a helpful assistant who speaks Spanish and you are very concise with your answers."
-        #     }
-        # ]
 
     async def build_system_prompt(self):
-        return "You are a helpful assistant who speaks Spanish and you are very concise with your answers."
+        """
+        Build system prompt with tool descriptions.
+        Dynamically generates the prompt based on registered tools.
+        """
+        # Generate tool descriptions from registered tools
+        tool_descriptions = "\n".join(
+            f"- {tool.name}: {tool.description}" 
+            for tool in self.tools
+        )
+        
+        return f"""You are a helpful AI assistant with access to tools.
+
+Available tools:
+{tool_descriptions}
+
+To use a tool, you MUST respond with a JSON block inside markdown code fences, like this:
+```json
+{{
+  "tool": "tool_name",
+  "args": {{
+    "parameter": "value"
+  }}
+}}
+```
+
+IMPORTANT:
+1. After receiving a Tool Output, use that information to FULFILL the user's request.
+2. Do not just describe the tool output unless asked.
+3. Use tools when they can help answer the question.
+4. Be conversational and friendly.
+5. If you don't need a tool to answer, respond directly.
+
+Example:
+User: "Search for information about Python"
+Assistant: ```json
+{{
+  "tool": "web_search",
+  "args": {{
+    "query": "Python programming language"
+  }}
+}}
+```
+"""
         
     async def process_response(self, response):
-
+        """
+        Process the response from the AI.
+        Parses tool calls from JSON blocks and executes them.
+        """
         if not response.get("choices"):
             return False
         
         response_message = response
         pprint(response_message)
 
+        # TODO: Implement JSON block parsing for tool calls
+        # Example:
         # content = response_message.get("content", "")
-        # tool_calls = response_message.get("tool_calls", [])
-
-        # if tool_calls:
-        #     self.messages.append(response_message)
-            
-        #     available_functions = {}
-            
-        #     for tool_call in tool_calls:
-        #         function_name = tool_call.function.name
-        #         function_to_call = available_functions.get(function_name)
-                
-        #         if function_to_call:
-        #             try:
-        #                 function_args = json.loads(tool_call.function.arguments)
-        #                 function_response = function_to_call(**function_args)
-                        
-        #                 self.messages.append(
-        #                     {
-        #                         "tool_call_id": tool_call.id,
-        #                         "role": "tool",
-        #                         "name": function_name,
-        #                         "content": str(function_response),
-        #                     }
-        #                 )
-        #             except Exception as e:
-        #                 self.messages.append(
-        #                     {
-        #                         "tool_call_id": tool_call.id,
-        #                         "role": "tool",
-        #                         "name": function_name,
-        #                         "content": f"Error executing tool: {str(e)}",
-        #                     }
-        #                 )
-        #         else:
-        #             self.messages.append(
-        #                 {
-        #                     "tool_call_id": tool_call.id,
-        #                     "role": "tool",
-        #                     "name": function_name,
-        #                     "content": f"Error: Tool '{function_name}' not found.",
-        #                 }
-        #             )
-                
-        #     return True
-        # elif content:
-        #     print(f"Assistant: {content}")
-        #     self.messages.append({"role": "assistant", "content": content})
-        # else:
-        #     print("❓ Empty or unexpected response")
+        # Parse ```json blocks to extract tool calls
+        # Execute tools using self.tools_map
     
         return False
