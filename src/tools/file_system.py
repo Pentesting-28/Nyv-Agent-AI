@@ -489,7 +489,8 @@ class BatchMoveTool(FileSystemBaseTool):
                 continue
 
             source = move.get("source")
-            destination = move.get("destination")
+            # Accept both "destination" and "target" as the destination key
+            destination = move.get("destination") or move.get("target")
             
             if not source or not destination:
                 errors.append(f"Item {i+1}: Missing 'source' or 'destination' key")

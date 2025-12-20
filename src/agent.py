@@ -1,6 +1,8 @@
+
 import os
 import json
 import re
+import ast
 from pprint import pprint
 from .models.agent_model import AgentModel
 from .tools import get_all_tools
@@ -104,13 +106,17 @@ Assistant: ```json
                 try:
                     tool_call = json.loads(json_str)
                 except json.JSONDecodeError:
-                    # Fallback: Try to escape unescaped newlines within strings
+                    # Fallback 1: Try to escape unescaped newlines within strings
                     try:
                         tool_call = json.loads(json_str, strict=False)
                     except json.JSONDecodeError:
-                        # Last resort: manual cleanup of common issues
-                        cleaned_str = json_str.replace('\n', '\\n').replace('\r', '')
-                        tool_call = json.loads(cleaned_str)
+                        # Fallback 2: Try ast.literal_eval for Python-style dicts (single quotes)
+                        try:
+                            tool_call = ast.literal_eval(json_str)
+                        except (ValueError, SyntaxError):
+                            # Last resort: manual cleanup of common issues
+                            cleaned_str = json_str.replace('\n', '\\n').replace('\r', '')
+                            tool_call = json.loads(cleaned_str)
 
                 tool_name = tool_call.get("tool")
                 tool_args = tool_call.get("args", {})
