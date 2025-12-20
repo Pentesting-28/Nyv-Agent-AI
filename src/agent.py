@@ -92,7 +92,33 @@ Assistant: ```json
         
         if json_match:
             try:
-                tool_call = json.loads(json_match.group(1))
+                json_str = json_match.group(1)
+                
+                # Sanitize JSON string to handle common LLM errors
+                # 1. Escape newlines inside string values (but not structural newlines)
+                # This is tricky with regex, so we'll use a simpler approach:
+                # If json.loads fails, we try to clean it up.
+                
+                try:
+                    tool_call = json.loads(json_str)
+                except json.JSONDecodeError:
+                    # Fallback: Try to escape unescaped newlines within strings
+                    # This regex looks for newlines that are NOT followed by typical JSON structure chars
+                    # It's a heuristic, but often works for "content": "line1\nline2" where \n is literal
+                    
+                    # A better approach for "Invalid control character" (which is usually \n inside string):
+                    # We can try to replace literal newlines with \n, but we must be careful not to break the JSON structure.
+                    # For now, let's try strict=False which allows some control characters
+                    try:
+                        tool_call = json.loads(json_str, strict=False)
+                    except json.JSONDecodeError:
+                        # Last resort: manual cleanup of common issues
+                        # Replace real newlines with \n if they seem to be inside a string
+                        # This is complex to do perfectly without a parser, but we can try a simple replace
+                        # for the specific error "Invalid control character"
+                        cleaned_str = json_str.replace('\n', '\\n').replace('\r', '')
+                        tool_call = json.loads(cleaned_str)
+
                 tool_name = tool_call.get("tool")
                 tool_args = tool_call.get("args", {})
                 
@@ -123,7 +149,7 @@ Assistant: ```json
                     console_ui.display_error(f"Tool '{tool_name}' not found")
                     
             except json.JSONDecodeError as e:
-                console_ui.display_error(f"Error parsing tool JSON: {e}")
+                console_ui.display_error(f"Error parsing tool JSON: {e}\nContent: {json_str[:100]}...")
         
         # No tool call found, display the response with Markdown
         console_ui.display_response(content)
