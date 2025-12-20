@@ -19,7 +19,7 @@ class WebSearchTool(BaseTool):
         "Content-Type": "application/x-www-form-urlencoded"
     }
     DEFAULT_TIMEOUT = 10.0
-    DEFAULT_MAX_RESULTS = 3
+    DEFAULT_MAX_RESULTS = 5
     
     # Regex patterns (compiled once for performance)
     # Note: DDG's HTML has class before href, so we need a flexible pattern
@@ -48,7 +48,7 @@ class WebSearchTool(BaseTool):
                     "max_results": {
                         "type": "integer",
                         "description": "Maximum number of results to return (default: 3, max: 10)",
-                        "default": 3
+                        "default": 5
                     }
                 },
                 "required": ["query"]

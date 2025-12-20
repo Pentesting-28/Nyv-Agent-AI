@@ -20,7 +20,6 @@ class ClientAI:
         self,
         model: str,
         messages: List[dict],
-        tools: Optional[List[dict]] = None,
         temperature: float = 0.7,
         max_tokens: int = 2000,
         timeout: Optional[float | Timeout | None | NotGiven] = not_given
@@ -37,7 +36,6 @@ class ClientAI:
         payload = {
             "model": model,
             "messages": messages,
-            "tools": tools,
             "temperature": temperature,
             "max_tokens": max_tokens
         }

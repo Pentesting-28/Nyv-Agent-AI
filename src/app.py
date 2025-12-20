@@ -35,7 +35,7 @@ async def main():
                 messages=agent.messages
             )
 
-            response = agent.process_response(response)
+            response = await agent.process_response(response)
 
             if not response:
                 break

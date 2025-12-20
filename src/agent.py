@@ -1,17 +1,22 @@
 import os
 import json
+import re
 from pprint import pprint
-from models.agent_model import AgentModel
-from tools import get_all_tools
+from .models.agent_model import AgentModel
+from .tools import get_all_tools
 
 
 class Agent(AgentModel):
     def __init__(self):
         self.tools = get_all_tools()
         self.tools_map = {tool.name: tool for tool in self.tools}
-        self.messages = []
+        self.system_prompt = self._build_system_prompt()
+        # Initialize messages with system prompt
+        self.messages = [
+            {"role": "system", "content": self.system_prompt}
+        ]
 
-    async def build_system_prompt(self):
+    def _build_system_prompt(self) -> str:
         """
         Build system prompt with tool descriptions.
         Dynamically generates the prompt based on registered tools.
@@ -55,22 +60,66 @@ Assistant: ```json
 }}
 ```
 """
+
+    # Keep the abstract method implementation
+    async def build_system_prompt(self) -> str:
+        return self.system_prompt
         
     async def process_response(self, response):
         """
         Process the response from the AI.
         Parses tool calls from JSON blocks and executes them.
         """
+        # Handle None or invalid responses
+        if response is None:
+            print("[Error: No response from API]")
+            return False
+            
         if not response.get("choices"):
+            print("[Error: No choices in response]")
             return False
         
-        response_message = response
-        pprint(response_message)
-
-        # TODO: Implement JSON block parsing for tool calls
-        # Example:
-        # content = response_message.get("content", "")
-        # Parse ```json blocks to extract tool calls
-        # Execute tools using self.tools_map
-    
+        response_message = response["choices"][0]["message"]
+        content = response_message.get("content", "")
+        
+        # Add assistant message to history
+        self.messages.append({"role": "assistant", "content": content})
+        
+        # Try to extract JSON tool call from the response
+        json_match = re.search(r'```json\s*(\{.*?\})\s*```', content, re.DOTALL)
+        
+        if json_match:
+            try:
+                tool_call = json.loads(json_match.group(1))
+                tool_name = tool_call.get("tool")
+                tool_args = tool_call.get("args", {})
+                
+                # Get the tool from our map
+                tool = self.tools_map.get(tool_name)
+                
+                if tool:
+                    print(f"[Executing tool: {tool_name}]")
+                    
+                    # Execute the tool
+                    if isinstance(tool_args, dict):
+                        result = await tool.execute(**tool_args)
+                    else:
+                        result = await tool.execute(tool_args)
+                    
+                    # Add tool result to messages
+                    self.messages.append({
+                        "role": "user",
+                        "content": f"Tool Output ({tool_name}):\n{result}"
+                    })
+                    
+                    # Return True to continue the loop and get AI's response to the tool output
+                    return True
+                else:
+                    print(f"[Error: Tool '{tool_name}' not found]")
+                    
+            except json.JSONDecodeError as e:
+                print(f"[Error parsing tool JSON: {e}]")
+        
+        # No tool call found, just print the response
+        print(f"Assistant: {content}")
         return False
