@@ -6,7 +6,7 @@ Performs web searches using DuckDuckGo's HTML interface.
 import re
 import httpx
 from typing import Optional
-from urllib.parse import unquote
+from urllib.parse import unquote, quote
 from src.models.function_model import BaseTool, tool_registry
 
 
@@ -176,11 +176,16 @@ class WebSearchTool(BaseTool):
 web_search_tool = WebSearchTool(region="es-es")
 tool_registry.register(web_search_tool)
 
+
 class WebNavigateTool(BaseTool):
+    
+    BROWSERFLY_API_URL = "https://browserflyio.vercel.app/api/markdown"
+    BROWSERFLY_TIMEOUT = 30.0  # Increased timeout for rendering
+    
     def __init__(self):
         super().__init__(
             name="visit_url",
-            description="Visit a web page and extract its main content. Use this to read the full content of a search result.",
+            description="Visit a web page using BrowserFly API and get its content in markdown format. Use this to read the full content of a search result.",
             parameters={
                 "type": "object",
                 "properties": {
@@ -193,46 +198,51 @@ class WebNavigateTool(BaseTool):
             }
         )
         self.headers = WebSearchTool.DEFAULT_HEADERS
-        self.timeout = WebSearchTool.DEFAULT_TIMEOUT
-        self.pattern_html_tags = WebSearchTool.PATTERN_HTML_TAGS
 
-    def _clean_html(self, text: str) -> str:
-        """Remove HTML tags and clean up whitespace."""
-        # Remove scripts and styles first
-        text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.DOTALL)
-        text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL)
+    def _encode_url_for_browserfly(self, url: str) -> str:
+        """
+        Encode the URL for BrowserFly API.
         
-        # Remove tags
-        text = self.pattern_html_tags.sub(' ', text)
-        
-        # Collapse whitespace
-        lines = (line.strip() for line in text.splitlines())
-        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-        text = '\n'.join(chunk for chunk in chunks if chunk)
-        
-        return text
+        Args:
+            url: The original URL to visit
+            
+        Returns:
+            Complete BrowserFly API URL with encoded target URL
+        """
+        encoded_url = quote(url, safe='')
+        return f"{self.BROWSERFLY_API_URL}?url={encoded_url}"
 
     async def execute(self, url: str) -> str:
         print(f"[Tool] called: {self.name} with url={url}")
         
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
-                response = await client.get(url, headers=self.headers)
+            # Encode URL for BrowserFly API
+            browserfly_url = self._encode_url_for_browserfly(url)
+            print(f"[Tool] Using BrowserFly: {browserfly_url}")
+            
+            async with httpx.AsyncClient(timeout=self.BROWSERFLY_TIMEOUT, follow_redirects=True) as client:
+                response = await client.get(browserfly_url, headers=self.headers)
                 response.raise_for_status()
                 
-                # Simple content extraction
-                # In a real production app, we would use BeautifulSoup or similar
-                content = self._clean_html(response.text)
+                # BrowserFly returns markdown content directly
+                content = response.text
                 
                 # Limit content length to avoid context window overflow
                 max_length = 8000
                 if len(content) > max_length:
-                    content = content[:max_length] + "...\n[Content truncated]"
+                    content = content[:max_length] + "...\n[Content truncated due to length]"
                 
-                return f"Content of {url}:\n\n{content}"
+                return f"Content of {url} (via BrowserFly):\n\n{content}"
                 
+        except httpx.TimeoutException:
+            return f"Error: Request timed out while fetching {url} via BrowserFly. The page may be too slow to load."
+        except httpx.HTTPStatusError as e:
+            return f"Error: HTTP {e.response.status_code} - Unable to fetch {url} via BrowserFly."
+        except httpx.RequestError as e:
+            return f"Error: Network error while fetching {url} - {str(e)}"
         except Exception as e:
             return f"Error visiting URL {url}: {str(e)}"
+
 
 web_navigate_tool = WebNavigateTool()
 tool_registry.register(web_navigate_tool)

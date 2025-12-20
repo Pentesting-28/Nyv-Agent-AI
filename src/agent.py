@@ -52,6 +52,13 @@ IMPORTANT:
 4. Be conversational and friendly.
 5. If you don't need a tool to answer, respond directly.
 
+WEB NAVIGATION NOTES:
+- The visit_url tool uses BrowserFly API to render web pages and convert them to markdown
+- The content returned is already formatted in markdown, making it easy to analyze
+- BrowserFly handles JavaScript rendering, so dynamic content is included
+- The markdown format preserves structure: headings, links, lists, and paragraphs
+- You can directly analyze the markdown content without any HTML parsing
+
 Example:
 User: "Search for information about Python"
 Assistant: ```json
@@ -62,6 +69,17 @@ Assistant: ```json
   }}
 }}
 ```
+
+User: "Visit the Wikipedia article about Python"
+Assistant: ```json
+{{
+  "tool": "visit_url",
+  "args": {{
+    "url": "https://en.wikipedia.org/wiki/Python_(programming_language)"
+  }}
+}}
+```
+[Tool will fetch the page via BrowserFly and return markdown content]
 """
 
     # Keep the abstract method implementation
