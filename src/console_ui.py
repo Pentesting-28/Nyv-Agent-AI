@@ -31,22 +31,21 @@ custom_theme = Theme({
 
 console = Console(theme=custom_theme)
 
-# ONYX Banner
-ONYX_BANNER = r"""
-   ____  _   _ __   ____  __
-  / __ \| \ | |\ \ / /\ \/ /
- | |  | |  \| | \ V /  \  / 
- | |  | | . ` |  > <    > <  
- | |__| | |\  | / . \  / . \ 
-  \____/|_| \_|/_/ \_\/_/ \_\
-                             
+# NYV AI Banner
+NYV_BANNER = r"""
+  _   _  __     __ __      __       _    ___ 
+ | \ | | \ \   / / \ \    / /      / \  |_ _|
+ |  \| |  \ \_/ /   \ \  / /      / _ \  | | 
+ | |\  |    | |      \ \/ /      / ___ \ | | 
+ |_| \_|    |_|       \__/      /_/   \_\___|
+             AGENT AI SYSTEM                              
     [bold red]SYSTEM: ONLINE[/bold red] ⚡
 """
 
 def display_welcome():
     """Display the welcome panel with ONYX banner and author info."""
     welcome_text = Text()
-    welcome_text.append(ONYX_BANNER, style="bold green")
+    welcome_text.append(NYV_BANNER, style="bold green")
     welcome_text.append("\n  Advanced AI System 🔒\n", style="bold red")
     welcome_text.append("  --------------------------------\n", style="dim green")
     welcome_text.append("  Author: ", style="dim")
@@ -61,7 +60,7 @@ def display_welcome():
     panel = Panel(
         welcome_text,
         border_style="bold green",
-        title="[bold red]☠️ ONYX TERMINAL ☠️[/bold red]",
+        title="[bold red]☠️ NYV TERMINAL ☠️[/bold red]",
         subtitle="[dim]v1.0.0[/dim]",
         padding=(1, 2)
     )
@@ -137,7 +136,7 @@ def display_response(content: str):
         md = Markdown(display_content)
         panel = Panel(
             md,
-            title="[bold green]🤖 ONYX AI[/bold green]",
+            title="[bold green]🤖 NYV AI[/bold green]",
             title_align="left",
             border_style="green",
             padding=(1, 2)
@@ -147,7 +146,7 @@ def display_response(content: str):
         # Fallback to plain text if Markdown parsing fails
         console.print(Panel(
             display_content,
-            title="[bold green]🤖 ONYX AI[/bold green]",
+            title="[bold green]🤖 NYV AI[/bold green]",
             title_align="left",
             border_style="green",
             padding=(1, 2)
@@ -233,7 +232,7 @@ def prompt_user() -> str:
         # Kali/Parrot style prompt
         prompt_text = Text()
         prompt_text.append("┌──(", style="bold blue")
-        prompt_text.append("onyx㉿ai", style="bold red")
+        prompt_text.append("nyv㉿ai", style="bold red")
         prompt_text.append(")-[", style="bold blue")
         prompt_text.append("~", style="bold white")
         prompt_text.append("]\n└─", style="bold blue")
@@ -250,7 +249,7 @@ def prompt_user() -> str:
 def display_user_message(message: str):
     """Display the user's message in a styled format."""
     text = Text()
-    text.append("root@ONYX: ", style="bold red")
+    text.append("root@NYV: ", style="bold red")
     text.append(message, style="bold white")
     console.print(text)
     console.print()
