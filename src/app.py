@@ -17,7 +17,8 @@ load_dotenv()
 
 client_ai = ClientAI(
     api_key=os.getenv("UNIFIE_API_KEY"),
-    base_url=os.getenv("UNIFIE_API_URL")
+    base_url=os.getenv("UNIFIE_API_URL"),
+    timeout=120.0
 )
 
 agent = Agent()

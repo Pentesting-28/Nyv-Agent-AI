@@ -49,7 +49,8 @@ class ClientAI:
                 response = await client.post(
                     url=url,
                     headers=headers,
-                    json=payload
+                    json=payload,
+                    timeout=self.timeout
                 )
 
                 if response.status_code != 200:
