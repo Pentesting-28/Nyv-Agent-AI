@@ -1,6 +1,7 @@
+
 """
-Console UI module for Claude Code-like styling using Rich library.
-Provides styled panels, spinners, and Markdown rendering for the AI agent interface.
+Console UI module for ONYX - Advanced AI Assistant.
+Provides styled panels, spinners, and Markdown rendering with a modern security-tool aesthetic.
 """
 from rich.console import Console
 from rich.panel import Panel
@@ -13,54 +14,55 @@ from rich.theme import Theme
 from rich.syntax import Syntax
 from rich.table import Table
 import re
+import random
 
-# Custom theme for Claude Code-like appearance
+# Custom theme for ONYX - Modern Security Vibe
 custom_theme = Theme({
-    "info": "cyan",
-    "warning": "yellow", 
+    "info": "bold cyan",
+    "warning": "bold yellow", 
     "error": "bold red",
     "success": "bold green",
     "tool": "bold magenta",
-    "user_prompt": "bold cyan",
+    "user_prompt": "bold green",
+    "system": "dim white",
+    "hacker_green": "bold #00ff00",
+    "hacker_red": "bold #ff0000",
 })
 
 console = Console(theme=custom_theme)
 
-# ASCII art banner
-WELCOME_BANNER = """
-╭─────────────────────────────────────────────────────────╮
-│                                                         │
-│       █████╗ ██╗      █████╗  ██████╗ ███████╗███╗   ██╗████████╗     │
-│      ██╔══██╗██║     ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝     │
-│      ███████║██║     ███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║        │
-│      ██╔══██║██║     ██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║        │
-│      ██║  ██║██║     ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║        │
-│      ╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝        │
-│                                                         │
-╰─────────────────────────────────────────────────────────╯
+# ONYX Banner
+ONYX_BANNER = r"""
+   ____  _   _ __   ____  __
+  / __ \| \ | |\ \ / /\ \/ /
+ | |  | |  \| | \ V /  \  / 
+ | |  | | . ` |  > <    > <  
+ | |__| | |\  | / . \  / . \ 
+  \____/|_| \_|/_/ \_\/_/ \_\
+                             
+    [bold red]SYSTEM: ONLINE[/bold red] ⚡
 """
-
-SIMPLE_BANNER = r"""
-   _   ___      _                  _   
-  /_\ |_ _|    /_\  __ _ ___ _ __ | |_ 
- / _ \ | |    / _ \/ _` / -_) '  \|  _|
-/_/ \_\___| |/_/ \_\__, \___|_|_|_|\__|
-                    |___/               
-"""
-
 
 def display_welcome():
-    """Display the welcome panel with ASCII art and agent info."""
+    """Display the welcome panel with ONYX banner and author info."""
     welcome_text = Text()
-    welcome_text.append(SIMPLE_BANNER, style="bold cyan")
-    welcome_text.append("\n\nYour AI Assistant with Tool Capabilities\n", style="dim")
-    welcome_text.append("Type ", style="dim")
+    welcome_text.append(ONYX_BANNER, style="bold green")
+    welcome_text.append("\n  Advanced AI System 🔒\n", style="bold red")
+    welcome_text.append("  --------------------------------\n", style="dim green")
+    welcome_text.append("  Author: ", style="dim")
+    welcome_text.append("Pentesting-28 🕷️\n", style="bold cyan")
+    welcome_text.append("  GitHub: ", style="dim")
+    welcome_text.append("https://github.com/Pentesting-28\n", style="underline blue")
+    welcome_text.append("  --------------------------------\n\n", style="dim green")
+    welcome_text.append("  Type ", style="dim")
     welcome_text.append("exit", style="bold red")
-    welcome_text.append(" to quit\n", style="dim")
+    welcome_text.append(" to terminate session\n", style="dim")
     
     panel = Panel(
         welcome_text,
-        border_style="cyan",
+        border_style="bold green",
+        title="[bold red]☠️ ONYX TERMINAL ☠️[/bold red]",
+        subtitle="[dim]v1.0.0[/dim]",
         padding=(1, 2)
     )
     console.print(panel)
@@ -70,13 +72,13 @@ def display_welcome():
 def display_thinking():
     """Return a Live context manager with a thinking spinner."""
     spinner_text = Text()
-    spinner_text.append(" Thinking", style="bold cyan")
-    spinner_text.append("...", style="dim cyan")
+    spinner_text.append(" Analyzing", style="bold green")
+    spinner_text.append("...", style="dim green")
     
     return Live(
         Panel(
             spinner_text,
-            border_style="cyan",
+            border_style="green",
             padding=(0, 1)
         ),
         console=console,
@@ -91,7 +93,7 @@ class ThinkingSpinner:
     def __init__(self):
         self.live = None
         self._frame = 0
-        self._frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        self._frames = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]
     
     def __enter__(self):
         self.live = Live(
@@ -110,9 +112,9 @@ class ThinkingSpinner:
     def _create_panel(self):
         frame = self._frames[self._frame % len(self._frames)]
         text = Text()
-        text.append(f" {frame} ", style="bold cyan")
-        text.append("Thinking...", style="cyan")
-        return Panel(text, border_style="dim cyan", padding=(0, 1))
+        text.append(f" {frame} ", style="bold red")
+        text.append("Processing Data...", style="bold green")
+        return Panel(text, border_style="dim green", padding=(0, 1))
     
     def update(self):
         self._frame += 1
@@ -135,7 +137,7 @@ def display_response(content: str):
         md = Markdown(display_content)
         panel = Panel(
             md,
-            title="[bold green]✨ Assistant[/bold green]",
+            title="[bold green]🤖 ONYX AI[/bold green]",
             title_align="left",
             border_style="green",
             padding=(1, 2)
@@ -145,7 +147,7 @@ def display_response(content: str):
         # Fallback to plain text if Markdown parsing fails
         console.print(Panel(
             display_content,
-            title="[bold green]✨ Assistant[/bold green]",
+            title="[bold green]🤖 ONYX AI[/bold green]",
             title_align="left",
             border_style="green",
             padding=(1, 2)
@@ -158,7 +160,7 @@ def display_tool_execution(tool_name: str, status: str = "executing"):
     if status == "executing":
         text = Text()
         text.append("⚡ ", style="bold yellow")
-        text.append(f"Executing tool: ", style="dim")
+        text.append(f"Initializing Module: ", style="dim green")
         text.append(tool_name, style="bold magenta")
         
         panel = Panel(
@@ -175,13 +177,13 @@ def display_tool_result(tool_name: str, result: str):
     display_result = result[:500] + "..." if len(result) > 500 else result
     
     content = Text()
-    content.append(f"Tool: ", style="dim")
+    content.append(f"Module: ", style="dim green")
     content.append(tool_name, style="bold magenta")
-    content.append(f"\n\n{display_result}", style="dim")
+    content.append(f"\n\n{display_result}", style="dim white")
     
     panel = Panel(
         content,
-        title="[bold blue]🔧 Tool Result[/bold blue]",
+        title="[bold blue]💾 SYSTEM OUTPUT[/bold blue]",
         title_align="left",
         border_style="blue",
         padding=(1, 2)
@@ -198,7 +200,7 @@ def display_error(message: str):
     
     panel = Panel(
         text,
-        title="[bold red]Error[/bold red]",
+        title="[bold red]SYSTEM ERROR[/bold red]",
         title_align="left",
         border_style="red",
         padding=(0, 1)
@@ -218,8 +220,8 @@ def display_info(message: str):
 def display_goodbye():
     """Display goodbye message."""
     text = Text()
-    text.append("\n👋 ", style="bold")
-    text.append("Goodbye! See you next time.", style="bold cyan")
+    text.append("\n💀 ", style="bold red")
+    text.append("Session Terminated. Stay safe.", style="bold green")
     console.print(text)
     console.print()
 
@@ -227,11 +229,18 @@ def display_goodbye():
 def prompt_user() -> str:
     """Display styled user prompt and get input."""
     try:
+        # Kali/Parrot style prompt
         prompt_text = Text()
-        prompt_text.append("❯ ", style="bold cyan")
+        prompt_text.append("┌──(", style="bold blue")
+        prompt_text.append("onyx㉿ai", style="bold red")
+        prompt_text.append(")-[", style="bold blue")
+        prompt_text.append("~", style="bold white")
+        prompt_text.append("]\n└─", style="bold blue")
+        prompt_text.append("$ ", style="bold white")
+        
         console.print(prompt_text, end="")
         user_input = input()
-        console.print()  # Add spacing after input
+        # console.print()  # Add spacing after input
         return user_input.strip()
     except (EOFError, KeyboardInterrupt):
         return "exit"
@@ -240,8 +249,8 @@ def prompt_user() -> str:
 def display_user_message(message: str):
     """Display the user's message in a styled format."""
     text = Text()
-    text.append("You: ", style="bold blue")
-    text.append(message, style="white")
+    text.append("root@ONYX: ", style="bold red")
+    text.append(message, style="bold white")
     console.print(text)
     console.print()
 
@@ -268,7 +277,7 @@ def display_debug(title: str, data: dict):
     
     panel = Panel(
         content,
-        title="[bold yellow]Debug Info[/bold yellow]",
+        title="[bold yellow]DEBUG TRACE[/bold yellow]",
         title_align="left",
         border_style="yellow",
         padding=(1, 2)
