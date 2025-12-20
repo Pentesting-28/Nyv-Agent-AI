@@ -173,8 +173,9 @@ def display_tool_execution(tool_name: str, status: str = "executing"):
 
 def display_tool_result(tool_name: str, result: str):
     """Display tool execution result."""
-    # Truncate long results for display
-    display_result = result[:500] + "..." if len(result) > 500 else result
+    # Truncate long results for display (show more for better visibility)
+    max_display = 2000
+    display_result = result[:max_display] + "..." if len(result) > max_display else result
     
     content = Text()
     content.append(f"Module: ", style="dim green")
