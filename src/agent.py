@@ -5,12 +5,12 @@ from pprint import pprint
 from .models.agent_model import AgentModel
 from .tools import get_all_tools
 
-
 class Agent(AgentModel):
     def __init__(self):
         self.tools = get_all_tools()
         self.tools_map = {tool.name: tool for tool in self.tools}
         self.system_prompt = self._build_system_prompt()
+
         # Initialize messages with system prompt
         self.messages = [
             {"role": "system", "content": self.system_prompt}
