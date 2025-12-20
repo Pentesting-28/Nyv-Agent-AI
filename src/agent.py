@@ -90,23 +90,39 @@ Assistant: ```json
         self.messages.append({"role": "assistant", "content": content})
         
         # Try to extract JSON tool call from the response
-        json_match = re.search(r'```json\s*(\{.*?\})\s*```', content, re.DOTALL)
+        # Use a more robust pattern that handles nested braces
+        json_match = re.search(r'```json\s*(\{[\s\S]*?\})\s*```', content)
+        
+        # If first pattern fails, try alternative patterns
+        if not json_match:
+            # Try without code fences (some LLMs output raw JSON)
+            json_match = re.search(r'(\{\s*"tool"\s*:\s*"[^"]+"\s*,\s*"args"\s*:\s*\{[\s\S]*?\}\s*\})', content)
         
         if json_match:
             try:
                 json_str = json_match.group(1)
                 
                 # Strip comments (// and /* */) from JSON string
-                # This regex handles // comments
-                json_str = re.sub(r'//.*', '', json_str)
+                # This regex handles // comments (but not inside strings)
+                json_str = re.sub(r'//[^\n]*', '', json_str)
                 # This regex handles /* */ comments
                 json_str = re.sub(r'/\*.*?\*/', '', json_str, flags=re.DOTALL)
+                
+                # Clean up trailing commas before closing braces (common LLM error)
+                json_str = re.sub(r',\s*}', '}', json_str)
+                json_str = re.sub(r',\s*]', ']', json_str)
+                
+                # Normalize whitespace: replace newlines, tabs, carriage returns with spaces
+                # This preserves JSON structure while removing problematic control characters
+                json_str = json_str.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+                # Remove multiple consecutive spaces
+                json_str = re.sub(r'\s+', ' ', json_str)
                 
                 # Sanitize JSON string to handle common LLM errors
                 try:
                     tool_call = json.loads(json_str)
-                except json.JSONDecodeError:
-                    # Fallback 1: Try to escape unescaped newlines within strings
+                except json.JSONDecodeError as e:
+                    # Fallback 1: Try with strict=False
                     try:
                         tool_call = json.loads(json_str, strict=False)
                     except json.JSONDecodeError:
@@ -114,9 +130,18 @@ Assistant: ```json
                         try:
                             tool_call = ast.literal_eval(json_str)
                         except (ValueError, SyntaxError):
-                            # Last resort: manual cleanup of common issues
-                            cleaned_str = json_str.replace('\n', '\\n').replace('\r', '')
-                            tool_call = json.loads(cleaned_str)
+                            # Last resort: remove control chars entirely and normalize whitespace
+                            try:
+                                # Remove control characters
+                                cleaned_str = re.sub(r'[\x00-\x1f\x7f]', ' ', json_str)
+                                # Remove multiple spaces
+                                cleaned_str = re.sub(r'\s+', ' ', cleaned_str)
+                                tool_call = json.loads(cleaned_str)
+                            except json.JSONDecodeError:
+                                # If all parsing fails, show the error and continue
+                                console_ui.display_error(f"Cannot parse tool JSON: {str(e)}\nJSON: {json_str[:200]}...")
+                                console_ui.display_response(content)
+                                return False
 
                 tool_name = tool_call.get("tool")
                 tool_args = tool_call.get("args", {})
