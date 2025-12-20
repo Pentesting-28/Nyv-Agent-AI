@@ -3,6 +3,7 @@ import asyncio
 from dotenv import load_dotenv
 from .client_ai import ClientAI
 from .agent import Agent
+from . import console_ui
 
 load_dotenv()
 
@@ -14,30 +15,38 @@ client_ai = ClientAI(
 agent = Agent()
 
 async def main():
+    # Show welcome banner
+    console_ui.display_welcome()
+    
     # Chat loop
     while True:
-        user_input = input("You: ").strip()
+        user_input = console_ui.prompt_user()
 
         # Validations
         if not user_input:
             continue
 
         if user_input.lower() in ("exit", "quit", "bye", "goodbye"):
-            print("Goodbye!")
+            console_ui.display_goodbye()
             break
         
-        # Add our message to the history
+        # Display user message
+        console_ui.display_user_message(user_input)
+        
+        # Add message to history
         agent.messages.append({"role": "user", "content": user_input})
         
         while True:
-            response = await client_ai.chat_completions_create(
-                model="moonshot-MBZUAI-IFM/K2-Think",
-                messages=agent.messages
-            )
+            # Show thinking spinner while waiting for response
+            with console_ui.ThinkingSpinner():
+                response = await client_ai.chat_completions_create(
+                    model="moonshot-MBZUAI-IFM/K2-Think",
+                    messages=agent.messages
+                )
 
-            response = await agent.process_response(response)
+            result = await agent.process_response(response)
 
-            if not response:
+            if not result:
                 break
 
 

@@ -4,6 +4,7 @@ import re
 from pprint import pprint
 from .models.agent_model import AgentModel
 from .tools import get_all_tools
+from . import console_ui
 
 class Agent(AgentModel):
     def __init__(self):
@@ -72,11 +73,11 @@ Assistant: ```json
         """
         # Handle None or invalid responses
         if response is None:
-            print("[Error: No response from API]")
+            console_ui.display_error("No response from API")
             return False
             
         if not response.get("choices"):
-            print("[Error: No choices in response]")
+            console_ui.display_error("No choices in response")
             return False
         
         response_message = response["choices"][0]["message"]
@@ -98,13 +99,16 @@ Assistant: ```json
                 tool = self.tools_map.get(tool_name)
                 
                 if tool:
-                    print(f"[Executing tool: {tool_name}]")
+                    console_ui.display_tool_execution(tool_name)
                     
                     # Execute the tool
                     if isinstance(tool_args, dict):
                         result = await tool.execute(**tool_args)
                     else:
                         result = await tool.execute(tool_args)
+                    
+                    # Display the tool result
+                    console_ui.display_tool_result(tool_name, str(result))
                     
                     # Add tool result to messages
                     self.messages.append({
@@ -115,11 +119,11 @@ Assistant: ```json
                     # Return True to continue the loop and get AI's response to the tool output
                     return True
                 else:
-                    print(f"[Error: Tool '{tool_name}' not found]")
+                    console_ui.display_error(f"Tool '{tool_name}' not found")
                     
             except json.JSONDecodeError as e:
-                print(f"[Error parsing tool JSON: {e}]")
+                console_ui.display_error(f"Error parsing tool JSON: {e}")
         
-        # No tool call found, just print the response
-        print(f"Assistant: {content}")
+        # No tool call found, display the response with Markdown
+        console_ui.display_response(content)
         return False
