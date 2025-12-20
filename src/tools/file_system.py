@@ -224,6 +224,221 @@ class DeleteTool(FileSystemBaseTool):
         except Exception as e:
             return f"Error deleting item: {str(e)}"
 
+class MoveTool(FileSystemBaseTool):
+    def __init__(self):
+        super().__init__(
+            name="move_item",
+            description="Move or rename a file or directory.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "source": {
+                        "type": "string",
+                        "description": "Path to the item to move/rename"
+                    },
+                    "destination": {
+                        "type": "string",
+                        "description": "New path or name for the item"
+                    }
+                },
+                "required": ["source", "destination"]
+            }
+        )
+
+    async def execute(self, source: str, destination: str) -> str:
+        try:
+            src_path = self._validate_path(source)
+            dst_path = self._validate_path(destination)
+            
+            if not src_path.exists():
+                return f"Error: Source '{source}' does not exist."
+            
+            if dst_path.exists():
+                return f"Error: Destination '{destination}' already exists."
+            
+            # Ensure destination parent exists
+            dst_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            shutil.move(str(src_path), str(dst_path))
+            return f"Successfully moved '{source}' to '{destination}'."
+                
+        except Exception as e:
+            return f"Error moving item: {str(e)}"
+
+class CopyTool(FileSystemBaseTool):
+    def __init__(self):
+        super().__init__(
+            name="copy_item",
+            description="Copy a file or directory to a new location.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "source": {
+                        "type": "string",
+                        "description": "Path to the item to copy"
+                    },
+                    "destination": {
+                        "type": "string",
+                        "description": "Destination path"
+                    }
+                },
+                "required": ["source", "destination"]
+            }
+        )
+
+    async def execute(self, source: str, destination: str) -> str:
+        try:
+            src_path = self._validate_path(source)
+            dst_path = self._validate_path(destination)
+            
+            if not src_path.exists():
+                return f"Error: Source '{source}' does not exist."
+            
+            if dst_path.exists():
+                return f"Error: Destination '{destination}' already exists."
+            
+            # Ensure destination parent exists
+            dst_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            if src_path.is_dir():
+                shutil.copytree(src_path, dst_path)
+                return f"Successfully copied directory '{source}' to '{destination}'."
+            else:
+                shutil.copy2(src_path, dst_path)
+                return f"Successfully copied file '{source}' to '{destination}'."
+                
+        except Exception as e:
+            return f"Error copying item: {str(e)}"
+
+class GetFileInfoTool(FileSystemBaseTool):
+    def __init__(self):
+        super().__init__(
+            name="get_file_info",
+            description="Get metadata about a file or directory (size, modification time, type).",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Path to the item"
+                    }
+                },
+                "required": ["path"]
+            }
+        )
+
+    async def execute(self, path: str) -> str:
+        try:
+            target_path = self._validate_path(path)
+            
+            if not target_path.exists():
+                return f"Error: Path '{path}' does not exist."
+            
+            stats = target_path.stat()
+            
+            info = [
+                f"Path: {path}",
+                f"Type: {'Directory' if target_path.is_dir() else 'File'}",
+                f"Size: {stats.st_size} bytes",
+                f"Created: {stats.st_ctime}",
+                f"Modified: {stats.st_mtime}",
+                f"Absolute Path: {target_path}"
+            ]
+            
+            return "\n".join(info)
+                
+        except Exception as e:
+            return f"Error getting file info: {str(e)}"
+
+class SearchFilesTool(FileSystemBaseTool):
+    def __init__(self):
+        super().__init__(
+            name="search_files",
+            description="Search for files recursively using a glob pattern.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Base directory to search in (default: .)",
+                        "default": "."
+                    },
+                    "pattern": {
+                        "type": "string",
+                        "description": "Glob pattern (e.g., '*.py', '**/*.txt')"
+                    }
+                },
+                "required": ["pattern"]
+            }
+        )
+
+    async def execute(self, pattern: str, path: str = ".") -> str:
+        try:
+            target_path = self._validate_path(path)
+            
+            if not target_path.exists():
+                return f"Error: Path '{path}' does not exist."
+            
+            matches = []
+            # Use rglob for recursive search if pattern doesn't have it, or just glob
+            # To be safe and powerful, we'll use rglob if the user didn't specify recursive wildcards,
+            # or just let them use standard glob patterns.
+            # Let's use rglob for convenience as requested in "recursive search".
+            
+            for item in target_path.rglob(pattern):
+                matches.append(str(item.relative_to(target_path)))
+            
+            if not matches:
+                return f"No files found matching '{pattern}' in '{path}'."
+            
+            # Limit results
+            if len(matches) > 50:
+                return f"Found {len(matches)} matches. First 50:\n" + "\n".join(sorted(matches[:50]))
+            
+            return f"Found {len(matches)} matches:\n" + "\n".join(sorted(matches))
+                
+        except Exception as e:
+            return f"Error searching files: {str(e)}"
+
+class AppendFileTool(FileSystemBaseTool):
+    def __init__(self):
+        super().__init__(
+            name="append_file",
+            description="Append text to the end of an existing file.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Path to the file"
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "Text content to append"
+                    }
+                },
+                "required": ["path", "content"]
+            }
+        )
+
+    async def execute(self, path: str, content: str) -> str:
+        try:
+            target_path = self._validate_path(path)
+            
+            if not target_path.exists():
+                return f"Error: File '{path}' does not exist. Use write_file to create it."
+            
+            if not target_path.is_file():
+                return f"Error: Path '{path}' is not a file."
+            
+            with open(target_path, 'a', encoding='utf-8') as f:
+                f.write(content)
+                
+            return f"Successfully appended to '{path}'."
+                
+        except Exception as e:
+            return f"Error appending to file: {str(e)}"
+
 # Instantiate and register tools
 list_directory_tool = ListDirectoryTool()
 tool_registry.register(list_directory_tool)
@@ -239,3 +454,18 @@ tool_registry.register(make_directory_tool)
 
 delete_tool = DeleteTool()
 tool_registry.register(delete_tool)
+
+move_tool = MoveTool()
+tool_registry.register(move_tool)
+
+copy_tool = CopyTool()
+tool_registry.register(copy_tool)
+
+get_file_info_tool = GetFileInfoTool()
+tool_registry.register(get_file_info_tool)
+
+search_files_tool = SearchFilesTool()
+tool_registry.register(search_files_tool)
+
+append_file_tool = AppendFileTool()
+tool_registry.register(append_file_tool)

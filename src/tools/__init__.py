@@ -13,7 +13,12 @@ from src.tools.file_system import (
     read_file_tool, ReadFileTool,
     write_file_tool, WriteFileTool,
     make_directory_tool, MakeDirectoryTool,
-    delete_tool, DeleteTool
+    delete_tool, DeleteTool,
+    move_tool, MoveTool,
+    copy_tool, CopyTool,
+    get_file_info_tool, GetFileInfoTool,
+    search_files_tool, SearchFilesTool,
+    append_file_tool, AppendFileTool
 )
 
 
@@ -45,6 +50,11 @@ __all__ = [
     "write_file_tool",
     "make_directory_tool",
     "delete_tool",
+    "move_tool",
+    "copy_tool",
+    "get_file_info_tool",
+    "search_files_tool",
+    "append_file_tool",
     # Tool classes
     "WebSearchTool",
     "WebNavigateTool",
@@ -53,6 +63,11 @@ __all__ = [
     "WriteFileTool",
     "MakeDirectoryTool",
     "DeleteTool",
+    "MoveTool",
+    "CopyTool",
+    "GetFileInfoTool",
+    "SearchFilesTool",
+    "AppendFileTool",
     # Helper functions
     "get_all_tools",
     "get_all_schemas",
