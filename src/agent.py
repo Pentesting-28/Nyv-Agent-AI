@@ -71,6 +71,7 @@ Assistant: ```json
         Process the response from the AI.
         Parses tool calls from JSON blocks and executes them.
         """
+        # print(f"DATA API: {response}")
         # Handle None or invalid responses
         if response is None:
             console_ui.display_error("No response from API")

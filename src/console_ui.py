@@ -244,3 +244,35 @@ def display_user_message(message: str):
     text.append(message, style="white")
     console.print(text)
     console.print()
+
+
+def display_debug(title: str, data: dict):
+    """Display debug information in a styled panel."""
+    from rich.syntax import Syntax
+    
+    content = Text()
+    content.append(f"🐛 {title}\n\n", style="bold yellow")
+    
+    for key, value in data.items():
+        content.append(f"{key}: ", style="bold dim")
+        
+        # Handle multiline values like tracebacks
+        value_str = str(value)
+        if "\n" in value_str:
+            content.append("\n", style="dim")
+            # Indent multiline content
+            for line in value_str.split("\n"):
+                content.append(f"    {line}\n", style="dim red")
+        else:
+            content.append(f"{value_str}\n", style="dim white")
+    
+    panel = Panel(
+        content,
+        title="[bold yellow]Debug Info[/bold yellow]",
+        title_align="left",
+        border_style="yellow",
+        padding=(1, 2)
+    )
+    console.print(panel)
+    console.print()
+
