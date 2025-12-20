@@ -39,7 +39,7 @@ class ListDirectoryTool(FileSystemBaseTool):
     def __init__(self):
         super().__init__(
             name="list_directory",
-            description="List files and directories in a given path. Returns names and types (file/dir).",
+            description="List ALL files and directories in a path, grouped by type (directories, then files by extension).",
             parameters={
                 "type": "object",
                 "properties": {
@@ -47,13 +47,18 @@ class ListDirectoryTool(FileSystemBaseTool):
                         "type": "string",
                         "description": "Directory path to list (default: current directory)",
                         "default": "."
+                    },
+                    "show_full_path": {
+                        "type": "boolean",
+                        "description": "If true, shows full absolute paths instead of just names",
+                        "default": False
                     }
                 },
                 "required": []
             }
         )
 
-    async def execute(self, path: str = ".") -> str:
+    async def execute(self, path: str = ".", show_full_path: bool = False) -> str:
         try:
             target_path = self._validate_path(path)
             
@@ -63,15 +68,40 @@ class ListDirectoryTool(FileSystemBaseTool):
             if not target_path.is_dir():
                 return f"Error: Path '{path}' is not a directory."
             
-            items = []
-            for item in target_path.iterdir():
-                type_str = "DIR " if item.is_dir() else "FILE"
-                items.append(f"[{type_str}] {item.name}")
+            directories = []
+            files_by_ext = {}
             
-            if not items:
+            for item in target_path.iterdir():
+                display_name = str(item) if show_full_path else item.name
+                if item.is_dir():
+                    directories.append(display_name)
+                else:
+                    ext = item.suffix.lower() if item.suffix else "(no extension)"
+                    if ext not in files_by_ext:
+                        files_by_ext[ext] = []
+                    files_by_ext[ext].append(display_name)
+            
+            if not directories and not files_by_ext:
                 return f"Directory '{path}' is empty."
-                
-            return f"Contents of '{path}':\n" + "\n".join(sorted(items))
+            
+            output = [f"Contents of '{path}':"]
+            output.append(f"Total: {len(directories)} directories, {sum(len(v) for v in files_by_ext.values())} files")
+            output.append("")
+            
+            if directories:
+                output.append("=== DIRECTORIES ===")
+                for d in sorted(directories):
+                    output.append(f"  [DIR] {d}")
+                output.append("")
+            
+            if files_by_ext:
+                output.append("=== FILES BY TYPE ===")
+                for ext in sorted(files_by_ext.keys()):
+                    output.append(f"  [{ext}] ({len(files_by_ext[ext])} files):")
+                    for f in sorted(files_by_ext[ext]):
+                        output.append(f"    - {f}")
+            
+            return "\n".join(output)
             
         except Exception as e:
             return f"Error listing directory: {str(e)}"
@@ -443,18 +473,20 @@ class BatchMoveTool(FileSystemBaseTool):
     def __init__(self):
         super().__init__(
             name="batch_move_items",
-            description="Move multiple files or directories in a single operation. Use this for organizing files.",
+            description="""Move multiple files/directories in a single operation. 
+Each item in 'moves' must be an object with 'source' and 'destination' keys.
+Example: {"moves": [{"source": "C:\\path\\file.txt", "destination": "C:\\path\\folder\\file.txt"}]}""",
             parameters={
                 "type": "object",
                 "properties": {
                     "moves": {
                         "type": "array",
-                        "description": "List of items to move",
+                        "description": "List of move operations. Each must be {source: 'path', destination: 'path'}",
                         "items": {
                             "type": "object",
                             "properties": {
-                                "source": {"type": "string", "description": "Path to the item to move"},
-                                "destination": {"type": "string", "description": "Destination path"}
+                                "source": {"type": "string", "description": "Full path to the item to move"},
+                                "destination": {"type": "string", "description": "Full destination path (folder or filename)"}
                             },
                             "required": ["source", "destination"]
                         }
@@ -464,17 +496,31 @@ class BatchMoveTool(FileSystemBaseTool):
             }
         )
 
-    async def execute(self, moves: Union[List[dict], dict] = None, **kwargs) -> str:
+    def _normalize_path(self, path_str: str) -> str:
+        """Normalize path string to fix common LLM errors."""
+        if not path_str:
+            return path_str
+        # Fix missing backslash after drive or known folders
+        import re
+        # Fix patterns like 'Downloads' followed by filename without separator
+        path_str = re.sub(r'(Downloads|Documents|Desktop|Pictures|Videos|Music)([A-Za-z0-9_])', r'\1\\\2', path_str)
+        # Normalize separators
+        path_str = path_str.replace('/', '\\\\')
+        return path_str
+
+    async def execute(self, moves: Union[List[dict], dict, List[str]] = None, **kwargs) -> str:
         # Handle aliases and hallucinations
         if moves is None:
             # Try common aliases
             moves = kwargs.get("sources") or \
                     kwargs.get("items") or \
                     kwargs.get("files") or \
+                    kwargs.get("operations") or \
                     kwargs.get("sources_destinations")
             
         if not moves:
-            return "Error: Missing 'moves' parameter. Please provide a list of objects with 'source' and 'destination' keys."
+            return """Error: Missing 'moves' parameter. 
+Provide a list of objects like: [{"source": "C:\\path\\file.txt", "destination": "C:\\path\\folder\\"}]"""
 
         # Handle single dict input (LLM sometimes passes a single object instead of a list)
         if isinstance(moves, dict):
@@ -484,38 +530,54 @@ class BatchMoveTool(FileSystemBaseTool):
         errors = []
         
         for i, move in enumerate(moves):
+            # Handle string inputs (LLM sometimes passes just paths)
+            if isinstance(move, str):
+                errors.append(f"Item {i+1}: Got string '{move[:50]}...' instead of object. Use: {{\"source\": \"...\", \"destination\": \"...\"}}")
+                continue
+                
             if not isinstance(move, dict):
-                errors.append(f"Item {i+1}: Invalid format. Expected dictionary, got {type(move).__name__} ({str(move)})")
+                errors.append(f"Item {i+1}: Expected object, got {type(move).__name__}")
                 continue
 
-            source = move.get("source")
-            # Accept both "destination" and "target" as the destination key
-            destination = move.get("destination") or move.get("target")
+            # Accept multiple aliases for source
+            source = move.get("source") or move.get("src") or move.get("from") or move.get("path")
+            # Accept multiple aliases for destination
+            destination = move.get("destination") or move.get("target") or move.get("dst") or move.get("to") or move.get("dest")
             
             if not source or not destination:
-                errors.append(f"Item {i+1}: Missing 'source' or 'destination' key")
+                keys = list(move.keys())
+                errors.append(f"Item {i+1}: Missing source/destination. Got keys: {keys}. Need 'source' and 'destination'.")
                 continue
+
+            # Normalize paths to fix LLM errors
+            source = self._normalize_path(source)
+            destination = self._normalize_path(destination)
 
             try:
                 src_path = self._validate_path(source)
                 dst_path = self._validate_path(destination)
                 
                 if not src_path.exists():
-                    errors.append(f"Source '{source}' not found")
+                    errors.append(f"Source not found: '{source}'")
                     continue
                 
-                # Ensure destination parent exists
-                dst_path.parent.mkdir(parents=True, exist_ok=True)
+                # If destination is a directory, move the file INTO it
+                if dst_path.exists() and dst_path.is_dir():
+                    dst_path = dst_path / src_path.name
+                else:
+                    # Ensure destination parent exists
+                    dst_path.parent.mkdir(parents=True, exist_ok=True)
                 
-                # Handle overwrite protection or unique naming if needed?
-                # For now, standard move behavior (overwrites if dest is file, moves into if dest is dir)
-                # But shutil.move behavior varies. Let's be simple for now.
+                # Check if destination already exists
+                if dst_path.exists():
+                    errors.append(f"Destination already exists: '{dst_path}'")
+                    continue
                 
                 shutil.move(str(src_path), str(dst_path))
-                results.append(f"Moved '{source}' to '{destination}'")
+                results.append(f"Moved: {src_path.name}")
                 
             except Exception as e:
-                errors.append(f"Error moving '{source}': {str(e)}")
+                errors.append(f"Error with '{source}': {str(e)}")
         
         summary = f"Successfully moved {len(results)} items."
         if errors:
