@@ -6,7 +6,15 @@ Exports all available tools for the AI agent.
 from src.models.function_model import BaseTool, ToolRegistry, tool_registry
 
 # Import tools to register them in the registry
-from src.tools.web_search import web_search_tool, WebSearchTool
+# Import tools to register them in the registry
+from src.tools.web_search import web_search_tool, WebSearchTool, web_navigate_tool, WebNavigateTool
+from src.tools.file_system import (
+    list_directory_tool, ListDirectoryTool,
+    read_file_tool, ReadFileTool,
+    write_file_tool, WriteFileTool,
+    make_directory_tool, MakeDirectoryTool,
+    delete_tool, DeleteTool
+)
 
 
 def get_all_tools():
@@ -31,8 +39,20 @@ __all__ = [
     "tool_registry",
     # Tool instances
     "web_search_tool",
+    "web_navigate_tool",
+    "list_directory_tool",
+    "read_file_tool",
+    "write_file_tool",
+    "make_directory_tool",
+    "delete_tool",
     # Tool classes
     "WebSearchTool",
+    "WebNavigateTool",
+    "ListDirectoryTool",
+    "ReadFileTool",
+    "WriteFileTool",
+    "MakeDirectoryTool",
+    "DeleteTool",
     # Helper functions
     "get_all_tools",
     "get_all_schemas",

@@ -172,6 +172,67 @@ class WebSearchTool(BaseTool):
             return f"Error: Unexpected error during search - {str(e)}"
 
 
-# Create and register the tool
+# Create and register the tools
 web_search_tool = WebSearchTool(region="es-es")
 tool_registry.register(web_search_tool)
+
+class WebNavigateTool(BaseTool):
+    def __init__(self):
+        super().__init__(
+            name="visit_url",
+            description="Visit a web page and extract its main content. Use this to read the full content of a search result.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "The URL to visit"
+                    }
+                },
+                "required": ["url"]
+            }
+        )
+        self.headers = WebSearchTool.DEFAULT_HEADERS
+        self.timeout = WebSearchTool.DEFAULT_TIMEOUT
+        self.pattern_html_tags = WebSearchTool.PATTERN_HTML_TAGS
+
+    def _clean_html(self, text: str) -> str:
+        """Remove HTML tags and clean up whitespace."""
+        # Remove scripts and styles first
+        text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.DOTALL)
+        text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL)
+        
+        # Remove tags
+        text = self.pattern_html_tags.sub(' ', text)
+        
+        # Collapse whitespace
+        lines = (line.strip() for line in text.splitlines())
+        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+        text = '\n'.join(chunk for chunk in chunks if chunk)
+        
+        return text
+
+    async def execute(self, url: str) -> str:
+        print(f"[Tool] called: {self.name} with url={url}")
+        
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
+                response = await client.get(url, headers=self.headers)
+                response.raise_for_status()
+                
+                # Simple content extraction
+                # In a real production app, we would use BeautifulSoup or similar
+                content = self._clean_html(response.text)
+                
+                # Limit content length to avoid context window overflow
+                max_length = 8000
+                if len(content) > max_length:
+                    content = content[:max_length] + "...\n[Content truncated]"
+                
+                return f"Content of {url}:\n\n{content}"
+                
+        except Exception as e:
+            return f"Error visiting URL {url}: {str(e)}"
+
+web_navigate_tool = WebNavigateTool()
+tool_registry.register(web_navigate_tool)

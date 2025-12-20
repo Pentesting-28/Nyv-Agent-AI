@@ -275,4 +275,3 @@ def display_debug(title: str, data: dict):
     )
     console.print(panel)
     console.print()
-
