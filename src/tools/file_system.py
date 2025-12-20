@@ -464,14 +464,37 @@ class BatchMoveTool(FileSystemBaseTool):
             }
         )
 
-    async def execute(self, moves: List[dict]) -> str:
+    async def execute(self, moves: Union[List[dict], dict] = None, **kwargs) -> str:
+        # Handle aliases and hallucinations
+        if moves is None:
+            # Try common aliases
+            moves = kwargs.get("sources") or \
+                    kwargs.get("items") or \
+                    kwargs.get("files") or \
+                    kwargs.get("sources_destinations")
+            
+        if not moves:
+            return "Error: Missing 'moves' parameter. Please provide a list of objects with 'source' and 'destination' keys."
+
+        # Handle single dict input (LLM sometimes passes a single object instead of a list)
+        if isinstance(moves, dict):
+            moves = [moves]
+
         results = []
         errors = []
         
-        for move in moves:
+        for i, move in enumerate(moves):
+            if not isinstance(move, dict):
+                errors.append(f"Item {i+1}: Invalid format. Expected dictionary, got {type(move).__name__} ({str(move)})")
+                continue
+
             source = move.get("source")
             destination = move.get("destination")
             
+            if not source or not destination:
+                errors.append(f"Item {i+1}: Missing 'source' or 'destination' key")
+                continue
+
             try:
                 src_path = self._validate_path(source)
                 dst_path = self._validate_path(destination)

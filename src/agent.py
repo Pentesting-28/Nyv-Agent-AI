@@ -94,28 +94,21 @@ Assistant: ```json
             try:
                 json_str = json_match.group(1)
                 
-                # Sanitize JSON string to handle common LLM errors
-                # 1. Escape newlines inside string values (but not structural newlines)
-                # This is tricky with regex, so we'll use a simpler approach:
-                # If json.loads fails, we try to clean it up.
+                # Strip comments (// and /* */) from JSON string
+                # This regex handles // comments
+                json_str = re.sub(r'//.*', '', json_str)
+                # This regex handles /* */ comments
+                json_str = re.sub(r'/\*.*?\*/', '', json_str, flags=re.DOTALL)
                 
+                # Sanitize JSON string to handle common LLM errors
                 try:
                     tool_call = json.loads(json_str)
                 except json.JSONDecodeError:
                     # Fallback: Try to escape unescaped newlines within strings
-                    # This regex looks for newlines that are NOT followed by typical JSON structure chars
-                    # It's a heuristic, but often works for "content": "line1\nline2" where \n is literal
-                    
-                    # A better approach for "Invalid control character" (which is usually \n inside string):
-                    # We can try to replace literal newlines with \n, but we must be careful not to break the JSON structure.
-                    # For now, let's try strict=False which allows some control characters
                     try:
                         tool_call = json.loads(json_str, strict=False)
                     except json.JSONDecodeError:
                         # Last resort: manual cleanup of common issues
-                        # Replace real newlines with \n if they seem to be inside a string
-                        # This is complex to do perfectly without a parser, but we can try a simple replace
-                        # for the specific error "Invalid control character"
                         cleaned_str = json_str.replace('\n', '\\n').replace('\r', '')
                         tool_call = json.loads(cleaned_str)
 
