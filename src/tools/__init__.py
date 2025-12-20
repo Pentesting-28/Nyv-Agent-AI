@@ -18,7 +18,8 @@ from src.tools.file_system import (
     copy_tool, CopyTool,
     get_file_info_tool, GetFileInfoTool,
     search_files_tool, SearchFilesTool,
-    append_file_tool, AppendFileTool
+    append_file_tool, AppendFileTool,
+    batch_move_tool, BatchMoveTool
 )
 
 
@@ -55,6 +56,7 @@ __all__ = [
     "get_file_info_tool",
     "search_files_tool",
     "append_file_tool",
+    "batch_move_tool",
     # Tool classes
     "WebSearchTool",
     "WebNavigateTool",
@@ -68,6 +70,7 @@ __all__ = [
     "GetFileInfoTool",
     "SearchFilesTool",
     "AppendFileTool",
+    "BatchMoveTool",
     # Helper functions
     "get_all_tools",
     "get_all_schemas",

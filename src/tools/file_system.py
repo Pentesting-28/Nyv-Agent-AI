@@ -439,6 +439,68 @@ class AppendFileTool(FileSystemBaseTool):
         except Exception as e:
             return f"Error appending to file: {str(e)}"
 
+class BatchMoveTool(FileSystemBaseTool):
+    def __init__(self):
+        super().__init__(
+            name="batch_move_items",
+            description="Move multiple files or directories in a single operation. Use this for organizing files.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "moves": {
+                        "type": "array",
+                        "description": "List of items to move",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "source": {"type": "string", "description": "Path to the item to move"},
+                                "destination": {"type": "string", "description": "Destination path"}
+                            },
+                            "required": ["source", "destination"]
+                        }
+                    }
+                },
+                "required": ["moves"]
+            }
+        )
+
+    async def execute(self, moves: List[dict]) -> str:
+        results = []
+        errors = []
+        
+        for move in moves:
+            source = move.get("source")
+            destination = move.get("destination")
+            
+            try:
+                src_path = self._validate_path(source)
+                dst_path = self._validate_path(destination)
+                
+                if not src_path.exists():
+                    errors.append(f"Source '{source}' not found")
+                    continue
+                
+                # Ensure destination parent exists
+                dst_path.parent.mkdir(parents=True, exist_ok=True)
+                
+                # Handle overwrite protection or unique naming if needed?
+                # For now, standard move behavior (overwrites if dest is file, moves into if dest is dir)
+                # But shutil.move behavior varies. Let's be simple for now.
+                
+                shutil.move(str(src_path), str(dst_path))
+                results.append(f"Moved '{source}' to '{destination}'")
+                
+            except Exception as e:
+                errors.append(f"Error moving '{source}': {str(e)}")
+        
+        summary = f"Successfully moved {len(results)} items."
+        if errors:
+            summary += f"\nEncountered {len(errors)} errors:\n" + "\n".join(errors[:10])
+            if len(errors) > 10:
+                summary += f"\n...and {len(errors) - 10} more errors."
+        
+        return summary
+
 # Instantiate and register tools
 list_directory_tool = ListDirectoryTool()
 tool_registry.register(list_directory_tool)
@@ -469,3 +531,6 @@ tool_registry.register(search_files_tool)
 
 append_file_tool = AppendFileTool()
 tool_registry.register(append_file_tool)
+
+batch_move_tool = BatchMoveTool()
+tool_registry.register(batch_move_tool)
