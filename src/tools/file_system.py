@@ -163,15 +163,25 @@ class WriteFileTool(FileSystemBaseTool):
             }
         )
 
-    async def execute(self, path: str, content: str) -> str:
+    async def execute(self, path: str = None, file_path: str = None, content: str = None, **kwargs) -> str:
         try:
-            target_path = self._validate_path(path)
+            # Handle both 'path' and 'file_path' parameter names for compatibility
+            # Also check kwargs for additional flexibility
+            actual_path = file_path if file_path is not None else path
+            if actual_path is None and kwargs:
+                # Check if path was passed in kwargs (sometimes happens with LLM tool calls)
+                actual_path = kwargs.get('path') or kwargs.get('file_path')
+            
+            if actual_path is None:
+                return "Error: Missing required parameter 'path' or 'file_path'."
+            
+            target_path = self._validate_path(actual_path)
             
             # Create parent directories if they don't exist
             target_path.parent.mkdir(parents=True, exist_ok=True)
             
             target_path.write_text(content, encoding='utf-8')
-            return f"Successfully wrote to '{path}'."
+            return f"Successfully wrote to '{actual_path}'."
                 
         except Exception as e:
             return f"Error writing file: {str(e)}"
