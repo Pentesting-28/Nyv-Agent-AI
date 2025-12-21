@@ -13,6 +13,8 @@ from rich.style import Style
 from rich.theme import Theme
 from rich.syntax import Syntax
 from rich.table import Table
+from rich.align import Align
+from rich.console import Group
 import re
 import random
 
@@ -45,20 +47,42 @@ NYV_BANNER = r"""
 
 def display_welcome():
     """Display the welcome panel with ONYX banner and author info."""
-    welcome_text = Text.from_markup(NYV_BANNER, style="bold green")
-    welcome_text.append("  Advanced AI System 🔒\n", style="bold red")
-    welcome_text.append("  --------------------------------\n", style="dim green")
-    welcome_text.append("  Author: ", style="dim")
-    welcome_text.append("Pentesting-28 🕷️\n", style="bold cyan")
-    welcome_text.append("  GitHub: ", style="dim")
-    welcome_text.append("https://github.com/Pentesting-28\n", style="underline blue")
-    welcome_text.append("  --------------------------------\n\n", style="dim green")
-    welcome_text.append("  Type ", style="dim")
-    welcome_text.append("exit", style="bold red")
-    welcome_text.append(" to terminate session\n", style="dim")
+    # Banner centered
+    banner_text = Text.from_markup(NYV_BANNER, style="bold green")
+    centered_banner = Align.center(banner_text)
+    
+    # Subtitle centered
+    subtitle_text = Text("Advanced AI System 🔒\n", style="bold red", justify="center")
+    
+    # Author info in a centered table
+    info_table = Table.grid(padding=(0, 1))
+    info_table.add_column(justify="right", style="dim")
+    info_table.add_column(justify="left")
+    
+    info_table.add_row("Author:", "[bold cyan]Pentesting-28 🕷️[/bold cyan]")
+    info_table.add_row("GitHub:", "[underline blue]https://github.com/Pentesting-28[/underline blue]")
+    
+    centered_info = Align.center(info_table)
+    
+    # Exit instruction centered
+    exit_text = Text()
+    exit_text.append("\nType ", style="dim")
+    exit_text.append("exit", style="bold red")
+    exit_text.append(" to terminate session\n", style="dim")
+    centered_exit = Align.center(exit_text)
+    
+    # Group all elements
+    welcome_group = Group(
+        centered_banner,
+        subtitle_text,
+        Align.center(Text("--------------------------------", style="dim green")),
+        centered_info,
+        Align.center(Text("--------------------------------", style="dim green")),
+        centered_exit
+    )
     
     panel = Panel(
-        welcome_text,
+        welcome_group,
         border_style="bold green",
         title="[bold red]☠️  NYV TERMINAL ☠️  [/bold red]",
         subtitle="[dim]v1.0.0[/dim]",
