@@ -35,50 +35,46 @@ console = Console(theme=custom_theme)
 
 # NYV AI Banner
 NYV_BANNER = r"""
-  _   _  __     __ __      __       _    ___ 
- | \ | | \ \   / / \ \    / /      / \  |_ _|
- |  \| |  \ \_/ /   \ \  / /      / _ \  | | 
- | |\  |    | |      \ \/ /      / ___ \ | | 
- |_| \_|    |_|       \__/      /_/   \_\___|
- 
-             AGENT AI SYSTEM                              
-    [bold red]SYSTEM: ONLINE[/bold red] ⚡
+                                _   _  __     __ __      __       _    ___ 
+                                | \ | | \ \   / / \ \    / /      / \  |_ _|
+                                |  \| |  \ \_/ /   \ \  / /      / _ \  | | 
+                                | |\  |    | |      \ \/ /      / ___ \ | | 
+                                |_| \_|    |_|       \__/      /_/   \_\___|
+                                
+                                                AGENT AI SYSTEM                              
+                                                [bold red]SYSTEM: ONLINE[/bold red] ⚡
 """
 
 def display_welcome():
     """Display the welcome panel with ONYX banner and author info."""
-    # Banner centered
+    # Banner (left-aligned by default, but we'll use Text for consistency)
     banner_text = Text.from_markup(NYV_BANNER, style="bold green")
-    centered_banner = Align.center(banner_text)
     
-    # Subtitle centered
-    subtitle_text = Text("Advanced AI System 🔒\n", style="bold red", justify="center")
+    # Subtitle left-aligned
+    subtitle_text = Text("  Advanced AI System 🔒\n", style="bold red", justify="left")
     
-    # Author info in a centered table
+    # Author info in a table
     info_table = Table.grid(padding=(0, 1))
     info_table.add_column(justify="right", style="dim")
     info_table.add_column(justify="left")
     
-    info_table.add_row("Author:", "[bold cyan]Pentesting-28 🕷️[/bold cyan]")
-    info_table.add_row("GitHub:", "[underline blue]https://github.com/Pentesting-28[/underline blue]")
+    info_table.add_row("  Author:", "[bold cyan]Pentesting-28 🕷️[/bold cyan]")
+    info_table.add_row("  GitHub:", "[underline blue]https://github.com/Pentesting-28[/underline blue]")
     
-    centered_info = Align.center(info_table)
-    
-    # Exit instruction centered
+    # Exit instruction left-aligned
     exit_text = Text()
-    exit_text.append("\nType ", style="dim")
+    exit_text.append("\n  Type ", style="dim")
     exit_text.append("exit", style="bold red")
     exit_text.append(" to terminate session\n", style="dim")
-    centered_exit = Align.center(exit_text)
     
     # Group all elements
     welcome_group = Group(
-        centered_banner,
+        banner_text,
         subtitle_text,
-        Align.center(Text("--------------------------------", style="dim green")),
-        centered_info,
-        Align.center(Text("--------------------------------", style="dim green")),
-        centered_exit
+        Text("  --------------------------------", style="dim green"),
+        info_table,
+        Text("  --------------------------------", style="dim green"),
+        exit_text
     )
     
     panel = Panel(
