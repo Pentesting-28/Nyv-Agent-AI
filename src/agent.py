@@ -120,11 +120,10 @@ Assistant: ```json
             try:
                 json_str = json_match.group(1)
                 
-                # Strip comments (// and /* */) from JSON string
-                # This regex handles // comments (but not inside strings)
-                json_str = re.sub(r'//[^\n]*', '', json_str)
-                # This regex handles /* */ comments
-                json_str = re.sub(r'/\*.*?\*/', '', json_str, flags=re.DOTALL)
+                # Note: We've disabled comment stripping as it was causing issues with URLs containing //
+                # The JSON should be clean enough from the LLM without comment stripping
+                # json_str = re.sub(r'(?<!\\)//[^\n]*', '', json_str)
+                # json_str = re.sub(r'(?<!\\)/\*.*?\*/', '', json_str, flags=re.DOTALL)
                 
                 # Clean up trailing commas before closing braces (common LLM error)
                 json_str = re.sub(r',\s*}', '}', json_str)
@@ -133,8 +132,10 @@ Assistant: ```json
                 # Normalize whitespace: replace newlines, tabs, carriage returns with spaces
                 # This preserves JSON structure while removing problematic control characters
                 json_str = json_str.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
-                # Remove multiple consecutive spaces
-                json_str = re.sub(r'\s+', ' ', json_str)
+                # Remove multiple consecutive spaces, but be very conservative
+                # Only remove spaces that are clearly outside of string values
+                json_str = re.sub(r'\s+(?=[:,\]}\{])', '', json_str)  # Remove spaces before JSON structure chars
+                json_str = re.sub(r'(?<=[:,\[\{])\s+', '', json_str)  # Remove spaces after JSON structure chars
                 
                 # Sanitize JSON string to handle common LLM errors
                 try:
@@ -150,10 +151,12 @@ Assistant: ```json
                         except (ValueError, SyntaxError):
                             # Last resort: remove control chars entirely and normalize whitespace
                             try:
-                                # Remove control characters
+                                # Remove control characters but preserve URL-encoded sequences
                                 cleaned_str = re.sub(r'[\x00-\x1f\x7f]', ' ', json_str)
-                                # Remove multiple spaces
-                                cleaned_str = re.sub(r'\s+', ' ', cleaned_str)
+                                # Remove multiple spaces but preserve URL-encoded characters
+                                cleaned_str = re.sub(r'(?<!%)\s+', ' ', cleaned_str)
+                                # Fix common issues with URL encoding in JSON strings
+                                cleaned_str = cleaned_str.replace('%', '%25')  # Double-encode to be safe
                                 tool_call = json.loads(cleaned_str)
                             except json.JSONDecodeError:
                                 # If all parsing fails, show the error and continue

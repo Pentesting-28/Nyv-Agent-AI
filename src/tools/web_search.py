@@ -209,12 +209,32 @@ class WebNavigateTool(BaseTool):
         Returns:
             Complete BrowserFly API URL with encoded target URL
         """
-        encoded_url = quote(url, safe='')
+        # First, ensure the URL is properly decoded if it contains URL-encoded characters
+        # This handles cases where the URL might already be partially encoded
+        try:
+            # Try to decode the URL first to get the raw version
+            decoded_url = unquote(url)
+        except Exception:
+            # If decoding fails, use the original URL
+            decoded_url = url
+        
+        # Now encode it properly for the BrowserFly API
+        # Use safe='' to encode all special characters
+        encoded_url = quote(decoded_url, safe='')
         return f"{self.BROWSERFLY_API_URL}?url={encoded_url}"
 
     async def execute(self, url: str) -> str:
         print(f"[Tool] called: {self.name} with url={url}")
         
+        # Validate URL format
+        if not url or not isinstance(url, str):
+            return "Error: Invalid URL provided"
+            
+        # Clean and normalize the URL
+        url = url.strip()
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+
         try:
             # Encode URL for BrowserFly API
             browserfly_url = self._encode_url_for_browserfly(url)
