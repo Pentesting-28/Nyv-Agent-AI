@@ -61,7 +61,7 @@ def display_welcome():
     panel = Panel(
         welcome_text,
         border_style="bold green",
-        title="[bold red]☠️ NYV TERMINAL ☠️[/bold red]",
+        title="[bold red]☠️  NYV TERMINAL ☠️  [/bold red]",
         subtitle="[dim]v1.0.0[/dim]",
         padding=(1, 2)
     )
