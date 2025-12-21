@@ -45,9 +45,8 @@ NYV_BANNER = r"""
 
 def display_welcome():
     """Display the welcome panel with ONYX banner and author info."""
-    welcome_text = Text()
-    welcome_text.append(NYV_BANNER, style="bold green")
-    welcome_text.append("\n  Advanced AI System 🔒\n", style="bold red")
+    welcome_text = Text.from_markup(NYV_BANNER, style="bold green")
+    welcome_text.append("  Advanced AI System 🔒\n", style="bold red")
     welcome_text.append("  --------------------------------\n", style="dim green")
     welcome_text.append("  Author: ", style="dim")
     welcome_text.append("Pentesting-28 🕷️\n", style="bold cyan")
