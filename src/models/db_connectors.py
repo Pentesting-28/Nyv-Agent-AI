@@ -1,7 +1,7 @@
-from typing import Any, List, Dict, Optional, Union
 import sqlite3
 import pymysql
 import pg8000.native
+import ssl
 from .base_connector import BaseConnector
 
 class DatabaseConnector(BaseConnector):
@@ -175,12 +175,18 @@ import pg8000.dbapi
 class PostgresConnectorComple(DatabaseConnector):
     def __init__(self, host, user, password, database, port=5432):
         super().__init__()
+        # Create a default SSL context which is usually required for cloud DBs (Aiven, RDS, etc.)
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False # Optional: Relax hostname check if certificates are self-signed or generic
+        ssl_context.verify_mode = ssl.CERT_NONE # Start lenient to avoid 'certificate verify failed', can be strict later
+
         self.conn_args = {
             "user": user,
             "host": host,
             "password": password,
             "database": database,
-            "port": port
+            "port": port,
+            "ssl_context": ssl_context
         }
         
     def connect(self) -> None:
