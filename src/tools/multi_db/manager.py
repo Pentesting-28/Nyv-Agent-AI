@@ -1,7 +1,7 @@
 import os
 from typing import Dict, Optional
 from dotenv import load_dotenv
-from src.models.db_connectors import (
+from src.infrastructure.database.connectors import (
     MySQLConnector,
     PostgresConnector,
     SQLiteConnector,

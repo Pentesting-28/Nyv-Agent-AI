@@ -6,7 +6,7 @@ load_dotenv()
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.models.db_connectors import PostgresConnector
+from src.infrastructure.database.connectors import PostgresConnector
 
 try:
     print("Initializing Connector...")

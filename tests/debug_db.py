@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.models.db_connectors import SQLiteConnector
+from src.infrastructure.database.connectors import SQLiteConnector
 
 try:
     print("Initializing Connector...")
