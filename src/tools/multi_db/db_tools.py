@@ -101,10 +101,20 @@ class RunReadQueryTool(BaseDatabaseTool):
 
         try:
             conn = self.manager.get_connection(connection_name)
-            df = conn.fetch_data(query)
-            if df.empty:
+            rows = conn.fetch_data(query)
+            if not rows:
                 return "Query returned no results."
-            return df.to_string(index=False)
+            
+            # Simple markdown table formatting
+            headers = rows[0].keys()
+            header_line = "| " + " | ".join(headers) + " |"
+            separator_line = "| " + " | ".join(["---"] * len(headers)) + " |"
+            
+            lines = [header_line, separator_line]
+            for row in rows:
+                lines.append("| " + " | ".join(str(val) for val in row.values()) + " |")
+                
+            return "\n".join(lines)
         except Exception as e:
             return f"Error executing query: {str(e)}"
 

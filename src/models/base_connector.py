@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any, List, Dict, Optional, Union
-import pandas as pd
+
 
 class BaseConnector(ABC):
     """
@@ -26,9 +26,9 @@ class BaseConnector(ABC):
         pass
 
     @abstractmethod
-    def fetch_data(self, query: str, params: Optional[Dict[str, Any]] = None) -> pd.DataFrame:
+    def fetch_data(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """
-        Executes a query and returns the results as a Pandas DataFrame.
+        Executes a query and returns the results as a list of dictionaries.
         """
         pass
 

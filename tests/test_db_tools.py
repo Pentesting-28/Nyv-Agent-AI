@@ -5,22 +5,27 @@ import sys
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+# 1. Setup SQLite for testing - MUST BE DONE BEFORE IMPORTING tools.multi_db.db_tools
+# This ensures the Singleton Manager initializes with these values instead of .env
+os.environ["DB_TYPE"] = "sqlite"
+os.environ["DB_PATH"] = "test_db_v2.sqlite"
+
 from src.tools.multi_db.db_tools import ListTablesTool, RunReadQueryTool, RunWriteQueryTool
 
 async def main():
     print("Beginning Database Tool Verification...")
     
-    # 1. Setup SQLite for testing
-    # We will use the DB_TYPE=sqlite environment variable from .env or override it here for safety
-    os.environ["DB_TYPE"] = "sqlite"
-    os.environ["DB_PATH"] = "test_db.sqlite"
-    
     # Clean up previous test
-    if os.path.exists("test_db.sqlite"):
-        os.remove("test_db.sqlite")
+    if os.path.exists("test_db_v2.sqlite"):
+        try:
+            os.remove("test_db_v2.sqlite")
+        except:
+            pass
 
     try:
         # Initialize tools
+        # Note: In the real app, these are imported from db_tools which instantiates them.
+        # Here we instantiate them again, sharing the same Singleton Manager.
         list_tool = ListTablesTool()
         write_tool = RunWriteQueryTool()
         read_tool = RunReadQueryTool()

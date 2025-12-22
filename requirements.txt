@@ -14,7 +14,7 @@ python-dotenv==1.2.1
 rich==14.2.0
 typing_extensions==4.15.0
 
-sqlalchemy==2.0.25
-pandas==2.2.0
+
+
 pymysql==1.1.0
-psycopg2-binary==2.9.9
+pg8000==1.30.5
