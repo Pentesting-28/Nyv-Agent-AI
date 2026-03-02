@@ -1,6 +1,6 @@
-# NYV-AGENT-AI: Advanced Agentic System
+# Nyv-Agent-AI: Advanced Agentic System
 
-NYV-AGENT-AI is a professional-grade AI orchestrator built on Clean Architecture and SOLID principles. It provides a decoupled, scalable foundation for autonomous task execution with a resilient communication layer and a robust tool-calling system.
+Nyv-Agent-AI is a professional-grade AI orchestrator built on Clean Architecture and SOLID principles. It provides a decoupled, scalable foundation for autonomous task execution with a resilient communication layer and a robust tool-calling system.
 
 ![Architecture Diagram](./docs/images/01.png)
 ![Architecture Diagram](./docs/images/02.png)
@@ -72,7 +72,7 @@ The project follows a Hexagonal Architecture pattern, ensuring the core agent lo
 
 1. **Clone & Enter**:
    ```bash
-   cd NYV-AGENT-AI
+   cd Nyv-Agent-AI
    ```
 
 2. **Initialize Environment**:
@@ -126,7 +126,7 @@ $env:PYTHONPATH = "."; .venv\Scripts\pytest.exe tests/
 ## Author
 
 - **Pentesting-28**
-- **GitHub**: [https://github.com/Pentesting-28](https://github.com/Pentesting-28)
+- **GitHub**: [https://github.com/Pentesting-28/Nyv-Agent-AI](https://github.com/Pentesting-28/Nyv-Agent-AI)
 
 ---
 
