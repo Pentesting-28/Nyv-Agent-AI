@@ -8,18 +8,22 @@ import httpx
 from typing import Optional
 from urllib.parse import unquote, quote
 from src.core.base import BaseTool
+from src.core.config import (
+    DUCKDUCKGO_BASE_URL,
+    DUCKDUCKGO_HEADERS,
+    DUCKDUCKGO_TIMEOUT,
+    DUCKDUCKGO_MAX_RESULTS,
+    BROWSERFLY_API_URL as _BROWSERFLY_API_URL,
+    BROWSERFLY_TIMEOUT as _BROWSERFLY_TIMEOUT,
+)
 
 
 class WebSearchTool(BaseTool):
 
-    BASE_URL = "https://html.duckduckgo.com/html/"
-    DEFAULT_HEADERS = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-        "Referer": "https://html.duckduckgo.com/",
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
-    DEFAULT_TIMEOUT = 10.0
-    DEFAULT_MAX_RESULTS = 5
+    BASE_URL = DUCKDUCKGO_BASE_URL
+    DEFAULT_HEADERS = DUCKDUCKGO_HEADERS
+    DEFAULT_TIMEOUT = DUCKDUCKGO_TIMEOUT
+    DEFAULT_MAX_RESULTS = DUCKDUCKGO_MAX_RESULTS
     
     # Regex patterns (compiled once for performance)
     # Note: DDG's HTML has class before href, so we need a flexible pattern
@@ -175,8 +179,8 @@ class WebSearchTool(BaseTool):
 
 class WebNavigateTool(BaseTool):
     
-    BROWSERFLY_API_URL = "https://browserflyio.vercel.app/api/markdown"
-    BROWSERFLY_TIMEOUT = 30.0  # Increased timeout for rendering
+    BROWSERFLY_API_URL = _BROWSERFLY_API_URL
+    BROWSERFLY_TIMEOUT = _BROWSERFLY_TIMEOUT
     
     def __init__(self):
         super().__init__(

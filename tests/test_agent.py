@@ -68,3 +68,53 @@ async def test_agent_parameter_mapping(mock_llm_client, tool_registry):
     
     assert result is True
     assert "Path is mapped/path.txt" in agent.messages[-1]["content"]
+
+@pytest.mark.asyncio
+async def test_agent_extract_json_with_extra_braces(mock_llm_client, tool_registry):
+    """Regression test for models adding extra braces at the end of JSON."""
+    agent = Agent(mock_llm_client, tool_registry)
+    
+    # Tool call with extra closing braces
+    content = '```json\n{"tool": "dummy_tool", "args": {"input": "braces"}}}\n```'
+    mock_llm_client.add_response(content)
+    
+    result = await agent.run_cycle()
+    assert result is True
+    assert "Processed: braces" in agent.messages[-1]["content"]
+
+@pytest.mark.asyncio
+async def test_agent_extract_json_no_fence(mock_llm_client, tool_registry):
+    """Verify that the agent can extract JSON even without code fences."""
+    agent = Agent(mock_llm_client, tool_registry)
+    
+    # Raw JSON in text
+    content = 'I suggest using the tool: {"tool": "dummy_tool", "args": {"input": "no_fence"}} because reasons.'
+    mock_llm_client.add_response(content)
+    
+    result = await agent.run_cycle()
+    assert result is True
+    assert "Processed: no_fence" in agent.messages[-1]["content"]
+
+@pytest.mark.asyncio
+async def test_agent_extract_json_with_nested_objects(mock_llm_client, tool_registry):
+    """Verify that the agent handles nested JSON structures correctly."""
+    agent = Agent(mock_llm_client, tool_registry)
+    
+    # Nested dict in args
+    tool_call = {
+        "tool": "dummy_tool",
+        "args": {
+            "input": {
+                "key1": "val1",
+                "key2": [1, 2, 3]
+            }
+        }
+    }
+    content = f"```json\n{json.dumps(tool_call)}\n```"
+    mock_llm_client.add_response(content)
+    
+    result = await agent.run_cycle()
+    assert result is True
+    # The dummy tool just returns "Processed: str(input)"
+    assert "val1" in agent.messages[-1]["content"]
+    assert "1, 2, 3" in agent.messages[-1]["content"]

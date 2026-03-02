@@ -15,35 +15,14 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich.align import Align
 from rich.console import Group
+from .core.config import UI_THEME, NYV_BANNER
 import re
 import random
 
 # Custom theme for ONYX - Modern Security Vibe
-custom_theme = Theme({
-    "info": "bold cyan",
-    "warning": "bold yellow", 
-    "error": "bold red",
-    "success": "bold green",
-    "tool": "bold magenta",
-    "user_prompt": "bold green",
-    "system": "dim white",
-    "hacker_green": "bold #00ff00",
-    "hacker_red": "bold #ff0000",
-})
+custom_theme = Theme(UI_THEME)
 
 console = Console(theme=custom_theme)
-
-# NYV AI Banner
-NYV_BANNER = r"""
-                                _   _  __     __ __      __       _    ___ 
-                                | \ | | \ \   / / \ \    / /      / \  |_ _|
-                                |  \| |  \ \_/ /   \ \  / /      / _ \  | | 
-                                | |\  |    | |      \ \/ /      / ___ \ | | 
-                                |_| \_|    |_|       \__/      /_/   \_\___|
-                                
-                                                AGENT AI SYSTEM                              
-                                                [bold red]SYSTEM: ONLINE[/bold red] ⚡
-"""
 
 def display_welcome():
     """Display the welcome panel with ONYX banner and author info."""
@@ -304,3 +283,63 @@ def display_debug(title: str, data: dict):
     )
     console.print(panel)
     console.print()
+
+
+def display_model_selector(models: list) -> str:
+    """
+    Display a numbered table of available models and prompt the user to select one.
+    
+    Args:
+        models: List of model dicts with keys: name, model_id, context_length, supports_tools
+    
+    Returns:
+        The model_id string of the selected model.
+    """
+    console.print()
+    
+    table = Table(
+        title="[bold green]Available Models[/bold green]",
+        border_style="green",
+        show_lines=False,
+        padding=(0, 1)
+    )
+    table.add_column("#", style="bold cyan", justify="right", width=4)
+    table.add_column("Model", style="bold white", min_width=30)
+    table.add_column("Context", style="dim", justify="right", width=10)
+    table.add_column("Reasoning", style="dim", justify="center", width=11)
+    
+    for i, model in enumerate(models, 1):
+        ctx = f"{model['context_length'] // 1000}K"
+        reasoning_icon = "[green]Yes[/green]" if model.get("supports_reasoning") else "[dim]-[/dim]"
+        table.add_row(str(i), model["name"], ctx, reasoning_icon)
+    
+    console.print(table)
+    console.print()
+    
+    while True:
+        try:
+            prompt_text = Text()
+            prompt_text.append("  Select model ", style="bold green")
+            prompt_text.append(f"[1-{len(models)}]", style="bold cyan")
+            prompt_text.append(": ", style="bold green")
+            console.print(prompt_text, end="")
+            
+            choice = input().strip()
+            idx = int(choice) - 1
+            
+            if 0 <= idx < len(models):
+                selected = models[idx]
+                info = Text()
+                info.append("\n  Model loaded: ", style="dim green")
+                info.append(selected["name"], style="bold cyan")
+                info.append(f" ({selected['model_id']})\n", style="dim")
+                console.print(info)
+                return selected["model_id"]
+            else:
+                console.print("  [red]Invalid selection. Try again.[/red]")
+        except ValueError:
+            console.print("  [red]Enter a valid number.[/red]")
+        except (EOFError, KeyboardInterrupt):
+            # Default to first model
+            return models[0]["model_id"]
+

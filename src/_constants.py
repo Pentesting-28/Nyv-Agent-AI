@@ -1,8 +1,12 @@
-import httpx
-# default timeout is 10 minutes
-DEFAULT_TIMEOUT = httpx.Timeout(timeout=600, connect=5.0)
-DEFAULT_MAX_RETRIES = 2
-DEFAULT_CONNECTION_LIMITS = httpx.Limits(max_connections=1000, max_keepalive_connections=100)
+"""
+Legacy constants module — re-exports from core.config for backward compatibility.
+All new code should import directly from src.core.config.
+"""
 
-INITIAL_RETRY_DELAY = 0.5
-MAX_RETRY_DELAY = 8.0
+from .core.config import (
+    DEFAULT_TIMEOUT,
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_CONNECTION_LIMITS,
+    INITIAL_RETRY_DELAY,
+    MAX_RETRY_DELAY,
+)

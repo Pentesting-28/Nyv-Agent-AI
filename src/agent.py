@@ -71,7 +71,7 @@ IMPORTANT:
     async def process_response(self, response) -> bool:
         """
         Process the response from the AI.
-        Parses tool calls from JSON blocks and executes them.
+        Parses tool calls from balanced JSON blocks and executes them.
         """
         if response is None:
             console_ui.display_error("No response from API")
@@ -87,66 +87,41 @@ IMPORTANT:
         # Add assistant message to history
         self.messages.append({"role": "assistant", "content": content})
         
-        # 1. Try to extract JSON tool call from the response (standard JSON block)
-        json_match = re.search(r'```json\s*(\{[\s\S]*?\})\s*```', content)
+        # Try to extract the first valid tool-call JSON in the response
+        json_str = self._extract_json_balanced(content)
         
-        # 2. Try to extract raw JSON if no code fences
-        if not json_match:
-            json_match = re.search(r'(\{\s*"tool"\s*:\s*"[^"]+"\s*,\s*"args"\s*:\s*\{[\s\S]*?\}\s*\})', content)
-        
-        # 3. Try to extract K2-Think / Moonshot special format: <|tool_call_start|>[tool_name(arg1=val1, ...)]<|tool_call_end|>
+        # Fallback for K2-Think / Moonshot special format
         k2_match = re.search(r'<\|tool_call_start\|>\[(\w+)\(([\s\S]*?)\)\]<\|tool_call_end\|>', content)
         
-        if json_match:
+        if json_str:
             try:
-                json_str = json_match.group(1)
-                
-                # Clean up json strings (trailing commas, whitespace)
-                json_str = re.sub(r',\s*}', '}', json_str)
-                json_str = re.sub(r',\s*]', ']', json_str)
-                json_str = json_str.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
-                json_str = re.sub(r'\s+(?=[:,\]}\{])', '', json_str)
-                json_str = re.sub(r'(?<=[:,\[\{])\s+', '', json_str)
-                
-                try:
-                    tool_call_dict = json.loads(json_str)
-                except json.JSONDecodeError as e:
-                    try:
-                        tool_call_dict = json.loads(json_str, strict=False)
-                    except json.JSONDecodeError:
-                        try:
-                            tool_call_dict = ast.literal_eval(json_str)
-                        except (ValueError, SyntaxError):
-                            try:
-                                cleaned_str = re.sub(r'[\x00-\x1f\x7f]', ' ', json_str)
-                                cleaned_str = re.sub(r'(?<!%)\s+', ' ', cleaned_str)
-                                cleaned_str = cleaned_str.replace('%', '%25')
-                                tool_call_dict = json.loads(cleaned_str)
-                            except json.JSONDecodeError:
-                                console_ui.display_error(f"Cannot parse tool JSON: {str(e)}\nJSON: {json_str[:200]}...")
-                                console_ui.display_response(content)
-                                return False
+                # json_str is already validated/cleaned by _extract_json_balanced
+                tool_call_dict = json.loads(json_str)
 
-                # Map extracted JSON to our standard DTO
-                tool_call_dto = ToolCallDTO(
-                    id="call_" + str(len(self.messages)),
-                    name=tool_call_dict.get("tool", ""),
-                    arguments=tool_call_dict.get("args", {})
-                )
-                return await self._execute_tool_dto(tool_call_dto, content)
+                # Support both "tool"/"args" and "name"/"arguments" (standard OpenAI)
+                tool_name = tool_call_dict.get("tool") or tool_call_dict.get("name")
+                tool_args = tool_call_dict.get("args") or tool_call_dict.get("arguments") or {}
 
-            except json.JSONDecodeError as e:
-                console_ui.display_error(f"Error parsing tool JSON: {e}\nContent: {content[:100]}...")
+                if tool_name:
+                    tool_call_dto = ToolCallDTO(
+                        id="call_" + str(len(self.messages)),
+                        name=tool_name,
+                        arguments=tool_args
+                    )
+                    return await self._execute_tool_dto(tool_call_dto, content)
+
+            except Exception as e:
+                console_ui.display_error(f"Error processing tool JSON: {e}")
+                console_ui.display_response(content)
+                return False
 
         elif k2_match:
+            # ... kept for backward compatibility with specific models
             tool_name = k2_match.group(1)
             args_str = k2_match.group(2)
             
-            # Simple parser for "arg1=val1, arg2=val2"
             args = {}
             if args_str.strip():
-                # This is a bit naive but handles basic cases
-                # For complex cases we might need a better parser
                 pairs = re.findall(r'(\w+)\s*=\s*("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\'|[^,]+)', args_str)
                 for key, val in pairs:
                     val = val.strip()
@@ -160,6 +135,74 @@ IMPORTANT:
                 arguments=args
             )
             return await self._execute_tool_dto(tool_call_dto, content)
+
+        console_ui.display_response(content)
+        return False
+
+    def _extract_json_balanced(self, content: str) -> str | None:
+        """
+        Robustly extracts balanced JSON objects from string.
+        Prioritizes code fences, but searches everywhere if none are found.
+        Returns the first valid JSON that looks like a tool call.
+        """
+        # 1. Search in code fences first (standard LLM behavior)
+        fences = re.finditer(r'```(?:json)?\s*([\s\S]*?)```', content)
+        for match in fences:
+            fence_content = match.group(1)
+            balanced = self._find_first_balanced_json(fence_content)
+            if balanced:
+                return balanced
+                
+        # 2. Search everywhere else
+        return self._find_first_balanced_json(content)
+
+    def _find_first_balanced_json(self, text: str) -> str | None:
+        """Finds the first balanced { } object in text that parses as JSON."""
+        start_idx = -1
+        while True:
+            start_idx = text.find('{', start_idx + 1)
+            if start_idx == -1:
+                break
+                
+            balance = 0
+            in_string = False
+            escape = False
+            
+            for i in range(start_idx, len(text)):
+                char = text[i]
+                if escape:
+                    escape = False
+                    continue
+                if char == '\\':
+                    escape = True
+                elif char == '"':
+                    in_string = not in_string
+                elif not in_string:
+                    if char == '{':
+                        balance += 1
+                    elif char == '}':
+                        balance -= 1
+                        if balance == 0:
+                            candidate = text[start_idx:i+1]
+                            
+                            # Optimization: only check if it looks like a tool call
+                            if '"tool"' not in candidate and '"name"' not in candidate:
+                                break # Not a tool call, try next { at the start level
+                            
+                            # Verify valid JSON
+                            try:
+                                json.loads(candidate)
+                                return candidate
+                            except:
+                                # Try cleaning minor issues like trailing commas
+                                try:
+                                    cleaned = re.sub(r',\s*}', '}', candidate)
+                                    cleaned = re.sub(r',\s*]', ']', cleaned)
+                                    json.loads(cleaned)
+                                    return cleaned
+                                except:
+                                    break # Try next {
+        return None
 
         console_ui.display_response(content)
         return False

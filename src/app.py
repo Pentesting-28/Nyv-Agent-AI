@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from . import console_ui
 from src.core.registry import ToolRegistry
 from src.llm.client_ai import ClientAI
+from src.llm.model_fetcher import fetch_free_models
+from src.core.config import APP_TIMEOUT
 from src.agent import Agent
 from src.schemas.dtos import MessageDTO
 from src.tools import (
@@ -42,18 +44,24 @@ async def main():
     registry.register_tool(AppendFileTool())
     registry.register_tool(BatchMoveTool())
 
-    # Initialize LLM Client
+    # Show welcome banner
+    console_ui.display_welcome()
+
+    # Fetch and select model
+    console_ui.display_info("Fetching available models...")
+    models = await fetch_free_models()
+    selected_model = console_ui.display_model_selector(models)
+
+    # Initialize LLM Client with selected model
     client_ai = ClientAI(
         api_key=os.getenv("UNIFIE_API_KEY"),
         base_url=os.getenv("UNIFIE_API_URL"),
-        timeout=120.0
+        model=selected_model,
+        timeout=APP_TIMEOUT
     )
 
     # Initialize Agent
     agent = Agent(llm_client=client_ai, tool_registry=registry)
-
-    # Show welcome banner
-    console_ui.display_welcome()
     
     # Chat loop
     while True:
