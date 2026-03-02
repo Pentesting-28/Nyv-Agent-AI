@@ -7,7 +7,7 @@ import os
 import shutil
 from pathlib import Path
 from typing import Optional, Union, List
-from src.models.function_model import BaseTool, tool_registry
+from src.core.base import BaseTool
 
 class FileSystemBaseTool(BaseTool):
     """Base class for file system tools with common path validation."""
@@ -597,36 +597,4 @@ Provide a list of objects like: [{"source": "C:\\path\\file.txt", "destination":
         
         return summary
 
-# Instantiate and register tools
-list_directory_tool = ListDirectoryTool()
-tool_registry.register(list_directory_tool)
 
-read_file_tool = ReadFileTool()
-tool_registry.register(read_file_tool)
-
-write_file_tool = WriteFileTool()
-tool_registry.register(write_file_tool)
-
-make_directory_tool = MakeDirectoryTool()
-tool_registry.register(make_directory_tool)
-
-delete_tool = DeleteTool()
-tool_registry.register(delete_tool)
-
-move_tool = MoveTool()
-tool_registry.register(move_tool)
-
-copy_tool = CopyTool()
-tool_registry.register(copy_tool)
-
-get_file_info_tool = GetFileInfoTool()
-tool_registry.register(get_file_info_tool)
-
-search_files_tool = SearchFilesTool()
-tool_registry.register(search_files_tool)
-
-append_file_tool = AppendFileTool()
-tool_registry.register(append_file_tool)
-
-batch_move_tool = BatchMoveTool()
-tool_registry.register(batch_move_tool)

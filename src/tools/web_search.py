@@ -7,7 +7,7 @@ import re
 import httpx
 from typing import Optional
 from urllib.parse import unquote, quote
-from src.models.function_model import BaseTool, tool_registry
+from src.core.base import BaseTool
 
 
 class WebSearchTool(BaseTool):
@@ -172,10 +172,6 @@ class WebSearchTool(BaseTool):
             return f"Error: Unexpected error during search - {str(e)}"
 
 
-# Create and register the tools
-web_search_tool = WebSearchTool(region="es-es")
-tool_registry.register(web_search_tool)
-
 
 class WebNavigateTool(BaseTool):
     
@@ -264,5 +260,3 @@ class WebNavigateTool(BaseTool):
             return f"Error visiting URL {url}: {str(e)}"
 
 
-web_navigate_tool = WebNavigateTool()
-tool_registry.register(web_navigate_tool)
