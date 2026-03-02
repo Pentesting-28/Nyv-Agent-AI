@@ -54,8 +54,8 @@ async def main():
 
     # Initialize LLM Client with selected model
     client_ai = ClientAI(
-        api_key=os.getenv("UNIFIE_API_KEY"),
-        base_url=os.getenv("UNIFIE_API_URL"),
+        api_key=os.getenv("OPENROUTER_API_KEY"),
+        base_url=os.getenv("OPENROUTER_API_URL"),
         model=selected_model,
         timeout=APP_TIMEOUT
     )
