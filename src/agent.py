@@ -87,11 +87,15 @@ IMPORTANT:
         # Add assistant message to history
         self.messages.append({"role": "assistant", "content": content})
         
-        # Try to extract JSON tool call from the response
+        # 1. Try to extract JSON tool call from the response (standard JSON block)
         json_match = re.search(r'```json\s*(\{[\s\S]*?\})\s*```', content)
         
+        # 2. Try to extract raw JSON if no code fences
         if not json_match:
             json_match = re.search(r'(\{\s*"tool"\s*:\s*"[^"]+"\s*,\s*"args"\s*:\s*\{[\s\S]*?\}\s*\})', content)
+        
+        # 3. Try to extract K2-Think / Moonshot special format: <|tool_call_start|>[tool_name(arg1=val1, ...)]<|tool_call_end|>
+        k2_match = re.search(r'<\|tool_call_start\|>\[(\w+)\(([\s\S]*?)\)\]<\|tool_call_end\|>', content)
         
         if json_match:
             try:
@@ -129,37 +133,79 @@ IMPORTANT:
                     name=tool_call_dict.get("tool", ""),
                     arguments=tool_call_dict.get("args", {})
                 )
-                
-                tool = self.tool_registry.get_tool(tool_call_dto.name)
-                
-                if tool:
-                    console_ui.display_tool_execution(tool_call_dto.name)
-                    
-                    if isinstance(tool_call_dto.arguments, dict):
-                        result = await tool.execute(**tool_call_dto.arguments)
-                    else:
-                        result = await tool.execute(tool_call_dto.arguments)
-                    
-                    # Wrap execution result into DTO
-                    tool_result = ToolResultDTO(
-                        tool_call_id=tool_call_dto.id,
-                        name=tool_call_dto.name,
-                        content=str(result)
-                    )
-                    
-                    console_ui.display_tool_result(tool_call_dto.name, tool_result.content)
-                    
-                    self.messages.append({
-                        "role": "user",
-                        "content": f"Tool Output ({tool_result.name}):\n{tool_result.content}"
-                    })
-                    
-                    return True
-                else:
-                    console_ui.display_error(f"Tool '{tool_call_dto.name}' not found")
-                    
+                return await self._execute_tool_dto(tool_call_dto, content)
+
             except json.JSONDecodeError as e:
                 console_ui.display_error(f"Error parsing tool JSON: {e}\nContent: {content[:100]}...")
-        
+
+        elif k2_match:
+            tool_name = k2_match.group(1)
+            args_str = k2_match.group(2)
+            
+            # Simple parser for "arg1=val1, arg2=val2"
+            args = {}
+            if args_str.strip():
+                # This is a bit naive but handles basic cases
+                # For complex cases we might need a better parser
+                pairs = re.findall(r'(\w+)\s*=\s*("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\'|[^,]+)', args_str)
+                for key, val in pairs:
+                    val = val.strip()
+                    if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+                        val = val[1:-1]
+                    args[key] = val
+            
+            tool_call_dto = ToolCallDTO(
+                id="call_" + str(len(self.messages)),
+                name=tool_name,
+                arguments=args
+            )
+            return await self._execute_tool_dto(tool_call_dto, content)
+
         console_ui.display_response(content)
         return False
+
+    async def _execute_tool_dto(self, tool_call_dto: ToolCallDTO, full_content: str) -> bool:
+        """Helper to execute a tool from a DTO and handle the response."""
+        tool = self.tool_registry.get_tool(tool_call_dto.name)
+        
+        if tool:
+            console_ui.display_tool_execution(tool_call_dto.name)
+            
+            # Parameter mapping for resilience (e.g., file_path -> path)
+            args = tool_call_dto.arguments
+            if isinstance(args, dict):
+                # If tool expects 'path' but we got 'file_path' or 'filepath'
+                if 'path' in tool.parameters.get('properties', {}) and 'path' not in args:
+                    if 'file_path' in args:
+                        args['path'] = args.pop('file_path')
+                    elif 'filepath' in args:
+                        args['path'] = args.pop('filepath')
+            
+            try:
+                if isinstance(args, dict):
+                    result = await tool.execute(**args)
+                else:
+                    result = await tool.execute(args)
+                
+                # Wrap execution result into DTO
+                tool_result = ToolResultDTO(
+                    tool_call_id=tool_call_dto.id,
+                    name=tool_call_dto.name,
+                    content=str(result)
+                )
+                
+                console_ui.display_tool_result(tool_call_dto.name, tool_result.content)
+                
+                self.messages.append({
+                    "role": "user",
+                    "content": f"Tool Output ({tool_result.name}):\n{tool_result.content}"
+                })
+                
+                return True
+            except Exception as e:
+                console_ui.display_error(f"Error executing tool '{tool_call_dto.name}': {str(e)}")
+                return False
+        else:
+            console_ui.display_error(f"Tool '{tool_call_dto.name}' not found")
+            console_ui.display_response(full_content)
+            return False
